@@ -42,9 +42,9 @@ describe('parseDeepgram', () => {
   })
 })
 
-describe('http', () => {
+describe('http', async () => {
   const service = new AgreementService({
-    db: new Db(':memory:'),
+    db: await Db.memory(),
     hub: new Hub(),
     transcriber: { transcribe: async () => [] },
     extractor: { propose: async () => ({ commitments: [] }), amend: async () => ({ changes: [] }) },

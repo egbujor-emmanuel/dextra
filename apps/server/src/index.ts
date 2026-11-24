@@ -39,7 +39,7 @@ async function resolveBotUsername(bot: Bot): Promise<string | undefined> {
 
 async function main(): Promise<void> {
   const env = loadEnv()
-  const db = new Db(env.DATABASE_PATH)
+  const db = await Db.open(env.DATABASE_URL ?? `file:${env.DATABASE_PATH}`, env.DATABASE_AUTH_TOKEN)
   const hub = new Hub()
   const bot = env.TELEGRAM_BOT_TOKEN ? createBot(env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_ENV) : undefined
   // getMe verifies the token and gives the real username (the env value is only a fallback).
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
     service.housekeeping().catch(e => console.error('[dextra] housekeeping failed', e instanceof Error ? e.name : 'error'))
   }, PURGE_EVERY_MS)
   serve({ fetch: app.fetch, port: env.PORT })
-  const features = [`telegram:${bot ? `${env.TELEGRAM_ENV} @${botUsername}` : 'off'}`, `stt:${env.DEEPGRAM_API_KEY ? 'on' : 'off'}`, `llm:${env.GROQ_API_KEY ? "groq" : env.ANTHROPIC_API_KEY ? "claude" : "off"}`]
+  const features = [`telegram:${bot ? `${env.TELEGRAM_ENV} @${botUsername}` : 'off'}`, `stt:${env.DEEPGRAM_API_KEY ? 'on' : 'off'}`, `llm:${env.GROQ_API_KEY ? 'groq' : env.ANTHROPIC_API_KEY ? 'claude' : 'off'}`, `db:${env.DATABASE_URL?.startsWith('file:') || !env.DATABASE_URL ? 'local' : 'turso'}`]
   console.info(`[dextra] server on :${env.PORT} (${features.join(' ')})`)
 }
 

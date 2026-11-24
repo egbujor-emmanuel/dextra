@@ -85,12 +85,12 @@ export function registerHandlers(bot: Bot, service: AgreementService, db: Db, me
       return
     }
     try {
-      const a = service.forCounterparty(payload.slice(2), ctx.from.id)
+      const a = await service.forCounterparty(payload.slice(2), ctx.from.id)
       if (a.status !== 'sent') {
         await ctx.reply(a.status === 'confirmed' || a.status === 'fulfilled' ? 'Already confirmed ✓' : 'This agreement is no longer open.')
         return
       }
-      const wearer = db.wearer(a.wearerTgId)
+      const wearer = await db.wearer(a.wearerTgId)
       const kb = new InlineKeyboard().text('Confirm ✓', `ok:${a.id}`).text('Change something', `ch:${a.id}`)
       await ctx.reply(`${wearer?.name ?? 'They'} noted what you agreed:\n\n${bullet(a, wearer?.name ?? 'Them')}\n\nIs this right?`, { reply_markup: kb })
     } catch (e) {
@@ -104,7 +104,7 @@ export function registerHandlers(bot: Bot, service: AgreementService, db: Db, me
       await ctx.reply('Too many attempts. Wait 10 minutes and use the newest code on your lens.')
       return
     }
-    const result = service.redeemPairCode(ctx.match ?? '', ctx.from.id, displayName(ctx.from))
+    const result = await service.redeemPairCode(ctx.match ?? '', ctx.from.id, displayName(ctx.from))
     const replies = {
       ok: 'Linked ✓\n\nLast step: Telegram ▸ Settings ▸ Chat Automation ▸ add Dextra, so it can send agreements to the people you talk to.',
       invalid: 'That code is wrong, expired or already used. Look at your lens for a fresh one.',
@@ -123,8 +123,8 @@ export function registerHandlers(bot: Bot, service: AgreementService, db: Db, me
         await ctx.reply('Confirmed ✓ A shared checklist is now in your chat. Dictum, factum.')
         await messenger.notify(a.wearerTgId, `${a.counterpartyName} confirmed ✓`).catch(() => undefined)
       } else if (kind === 'ch' && id) {
-        service.forCounterparty(id, ctx.from.id)
-        db.startAmend(ctx.from.id, id, new Date().toISOString())
+        await service.forCounterparty(id, ctx.from.id)
+        await db.startAmend(ctx.from.id, id, new Date().toISOString())
         await ctx.answerCallbackQuery()
         await ctx.reply('What should change? Reply in one message, e.g. "Monday, not Friday".')
       } else {
@@ -136,17 +136,17 @@ export function registerHandlers(bot: Bot, service: AgreementService, db: Db, me
     }
   })
 
-  bot.on('business_connection', ctx => {
+  bot.on('business_connection', async ctx => {
     const bc = ctx.businessConnection
     const at = new Date().toISOString()
-    db.upsertWearer(bc.user.id, displayName(bc.user), at)
-    db.setBusinessConnection(bc.user.id, bc.id, bc.is_enabled, Boolean(bc.rights?.can_reply), at)
+    await db.upsertWearer(bc.user.id, displayName(bc.user), at)
+    await db.setBusinessConnection(bc.user.id, bc.id, bc.is_enabled, Boolean(bc.rights?.can_reply), at)
   })
 
   bot.on('business_message', async ctx => {
     const msg = ctx.businessMessage
     const connectionId = msg.business_connection_id
-    const wearer = connectionId ? db.wearerByConnection(connectionId) : undefined
+    const wearer = connectionId ? await db.wearerByConnection(connectionId) : undefined
     if (!wearer || !connectionId) return
     const done = msg.checklist_tasks_done
     if (done?.checklist_message) {
@@ -155,18 +155,18 @@ export function registerHandlers(bot: Bot, service: AgreementService, db: Db, me
     }
     // Only metadata (who wrote, when) is kept, to know who can be messaged. Message text is never stored or forwarded.
     if (msg.from && msg.from.id !== wearer.tg_id && !msg.from.is_bot) {
-      db.upsertContact(wearer.tg_id, { tg_id: msg.from.id, chat_id: msg.chat.id, name: displayName(msg.from), last_incoming_at: new Date(msg.date * 1000).toISOString() })
+      await db.upsertContact(wearer.tg_id, { tg_id: msg.from.id, chat_id: msg.chat.id, name: displayName(msg.from), last_incoming_at: new Date(msg.date * 1000).toISOString() })
     }
   })
 
   bot.on('message:text', async ctx => {
     if (ctx.chat.type !== 'private' || ctx.message.text.startsWith('/')) return
-    const id = db.peekAmend(ctx.from.id, new Date(Date.now() - AMEND_TTL_MS).toISOString())
+    const id = await db.peekAmend(ctx.from.id, new Date(Date.now() - AMEND_TTL_MS).toISOString())
     if (!id) return
     try {
       const a = await service.amend(id, ctx.from.id, ctx.message.text.slice(0, 500))
-      db.endAmend(ctx.from.id)
-      const wearer = db.wearer(a.wearerTgId)
+      await db.endAmend(ctx.from.id)
+      const wearer = await db.wearer(a.wearerTgId)
       await ctx.reply(`Sent your change to ${wearer?.name ?? 'them'}. They'll accept it on their glasses.`)
     } catch (e) {
       await replyError(ctx, e)

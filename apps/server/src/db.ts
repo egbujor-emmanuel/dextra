@@ -1,8 +1,7 @@
-import { DatabaseSync } from 'node:sqlite'
+import { createClient, type Client, type InArgs, type ResultSet } from '@libsql/client'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import type { Agreement, Utterance } from '@dextra/core'
-import type { Proposal } from '@dextra/core'
+import type { Agreement, Proposal, Utterance } from '@dextra/core'
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS devices (id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL, wearer_tg_id INTEGER, created_at TEXT NOT NULL);
@@ -23,131 +22,160 @@ export interface ContactRow { tg_id: number; chat_id: number; name: string; last
 export interface DraftRow { utterances: Utterance[]; proposal: Proposal; wearerSpeaker: number; contactTgId: number | null; capturedAt: string }
 export interface ChecklistRow { agreement_id: string; business_connection_id: string; chat_id: number; message_id: number }
 
-/** Thin repository over node:sqlite (no native build step). All SQL is parameterised. */
-export class Db {
-  private readonly db: DatabaseSync
+/** libSQL rows are array-like objects; hand the rest of the server plain records keyed by column name. */
+function plain<T>(rs: ResultSet): T[] {
+  return rs.rows.map(row => Object.fromEntries(rs.columns.map((col, i) => [col, row[i]])) as T)
+}
 
-  constructor(path: string) {
-    if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true })
-    this.db = new DatabaseSync(path)
-    this.db.exec('PRAGMA journal_mode = WAL;')
-    this.db.exec(SCHEMA)
-    this.migrate()
+/**
+ * Thin async repository over libSQL. `DATABASE_URL` is a local SQLite file (`file:…`) in development and tests, and a
+ * Turso database (`libsql://…`) in production, so data survives restarts on hosts with an ephemeral disk.
+ * All SQL is parameterised.
+ */
+export class Db {
+  private constructor(private readonly c: Client) {}
+
+  static async open(url: string, authToken?: string): Promise<Db> {
+    if (url.startsWith('file:')) mkdirSync(dirname(url.slice('file:'.length)), { recursive: true })
+    const db = new Db(createClient({ url, authToken }))
+    await db.c.executeMultiple(SCHEMA)
+    await db.migrate()
+    return db
+  }
+
+  /** In-memory database for tests. */
+  static memory(): Promise<Db> {
+    return Db.open(':memory:')
+  }
+
+  close(): void {
+    this.c.close()
+  }
+
+  private async all<T>(sql: string, args: InArgs = []): Promise<T[]> {
+    return plain<T>(await this.c.execute({ sql, args }))
+  }
+
+  private async get<T>(sql: string, args: InArgs = []): Promise<T | undefined> {
+    return (await this.all<T>(sql, args))[0]
+  }
+
+  /** Returns the number of rows changed. */
+  private async run(sql: string, args: InArgs = []): Promise<number> {
+    return (await this.c.execute({ sql, args })).rowsAffected
   }
 
   /** Additive migrations for databases created by earlier builds. */
-  private migrate(): void {
-    const cols = (this.db.prepare('PRAGMA table_info(drafts)').all() as { name: string }[]).map(c => c.name)
-    if (!cols.includes('contact_tg_id')) this.db.exec('ALTER TABLE drafts ADD COLUMN contact_tg_id INTEGER')
+  private async migrate(): Promise<void> {
+    const cols = (await this.all<{ name: string }>('PRAGMA table_info(drafts)')).map(c => c.name)
+    if (!cols.includes('contact_tg_id')) await this.run('ALTER TABLE drafts ADD COLUMN contact_tg_id INTEGER')
   }
 
-  insertDevice(id: string, tokenHash: string, at: string): void {
-    this.db.prepare('INSERT INTO devices (id, token_hash, created_at) VALUES (?, ?, ?)').run(id, tokenHash, at)
+  async insertDevice(id: string, tokenHash: string, at: string): Promise<void> {
+    await this.run('INSERT INTO devices (id, token_hash, created_at) VALUES (?, ?, ?)', [id, tokenHash, at])
   }
 
-  deviceByTokenHash(tokenHash: string): DeviceRow | undefined {
-    return this.db.prepare('SELECT id, wearer_tg_id FROM devices WHERE token_hash = ?').get(tokenHash) as DeviceRow | undefined
+  deviceByTokenHash(tokenHash: string): Promise<DeviceRow | undefined> {
+    return this.get<DeviceRow>('SELECT id, wearer_tg_id FROM devices WHERE token_hash = ?', [tokenHash])
   }
 
-  device(id: string): DeviceRow | undefined {
-    return this.db.prepare('SELECT id, wearer_tg_id FROM devices WHERE id = ?').get(id) as DeviceRow | undefined
+  device(id: string): Promise<DeviceRow | undefined> {
+    return this.get<DeviceRow>('SELECT id, wearer_tg_id FROM devices WHERE id = ?', [id])
   }
 
-  bindDevice(deviceId: string, wearerTgId: number): void {
-    this.db.prepare('UPDATE devices SET wearer_tg_id = ? WHERE id = ?').run(wearerTgId, deviceId)
+  async bindDevice(deviceId: string, wearerTgId: number): Promise<void> {
+    await this.run('UPDATE devices SET wearer_tg_id = ? WHERE id = ?', [wearerTgId, deviceId])
   }
 
-  devicesForWearer(tgId: number): string[] {
-    return (this.db.prepare('SELECT id FROM devices WHERE wearer_tg_id = ?').all(tgId) as { id: string }[]).map(r => r.id)
+  async devicesForWearer(tgId: number): Promise<string[]> {
+    return (await this.all<{ id: string }>('SELECT id FROM devices WHERE wearer_tg_id = ?', [tgId])).map(r => r.id)
   }
 
-  savePairCode(code: string, deviceId: string, expiresAt: string): void {
-    this.db.prepare('DELETE FROM pair_codes WHERE device_id = ?').run(deviceId)
-    this.db.prepare('INSERT INTO pair_codes (code, device_id, expires_at) VALUES (?, ?, ?)').run(code, deviceId, expiresAt)
+  /** One live code per device: the old code is removed in the same write batch. */
+  async savePairCode(code: string, deviceId: string, expiresAt: string): Promise<void> {
+    await this.c.batch(
+      [
+        { sql: 'DELETE FROM pair_codes WHERE device_id = ?', args: [deviceId] },
+        { sql: 'INSERT INTO pair_codes (code, device_id, expires_at) VALUES (?, ?, ?)', args: [code, deviceId, expiresAt] },
+      ],
+      'write',
+    )
   }
 
-  takePairCode(code: string, now: string): string | undefined {
-    const row = this.db.prepare('SELECT device_id, expires_at FROM pair_codes WHERE code = ?').get(code) as { device_id: string; expires_at: string } | undefined
-    this.db.prepare('DELETE FROM pair_codes WHERE code = ?').run(code)
+  /** Single-use: the code is deleted and read in one statement, so two redemptions can't both succeed. */
+  async takePairCode(code: string, now: string): Promise<string | undefined> {
+    const row = await this.get<{ device_id: string; expires_at: string }>('DELETE FROM pair_codes WHERE code = ? RETURNING device_id, expires_at', [code])
     return row && row.expires_at > now ? row.device_id : undefined
   }
 
-  upsertWearer(tgId: number, name: string, at: string): void {
-    this.db
-      .prepare('INSERT INTO wearers (tg_id, name, updated_at) VALUES (?, ?, ?) ON CONFLICT(tg_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at')
-      .run(tgId, name, at)
+  async upsertWearer(tgId: number, name: string, at: string): Promise<void> {
+    await this.run('INSERT INTO wearers (tg_id, name, updated_at) VALUES (?, ?, ?) ON CONFLICT(tg_id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at', [tgId, name, at])
   }
 
-  setBusinessConnection(tgId: number, connectionId: string, connected: boolean, canReply: boolean, at: string): void {
-    this.db
-      .prepare('UPDATE wearers SET business_connection_id = ?, connected = ?, can_reply = ?, updated_at = ? WHERE tg_id = ?')
-      .run(connectionId, connected ? 1 : 0, canReply ? 1 : 0, at, tgId)
+  async setBusinessConnection(tgId: number, connectionId: string, connected: boolean, canReply: boolean, at: string): Promise<void> {
+    await this.run('UPDATE wearers SET business_connection_id = ?, connected = ?, can_reply = ?, updated_at = ? WHERE tg_id = ?', [connectionId, connected ? 1 : 0, canReply ? 1 : 0, at, tgId])
   }
 
-  wearer(tgId: number): WearerRow | undefined {
-    return this.db.prepare('SELECT * FROM wearers WHERE tg_id = ?').get(tgId) as WearerRow | undefined
+  wearer(tgId: number): Promise<WearerRow | undefined> {
+    return this.get<WearerRow>('SELECT tg_id, name, business_connection_id, connected, can_reply FROM wearers WHERE tg_id = ?', [tgId])
   }
 
-  wearerByConnection(connectionId: string): WearerRow | undefined {
-    return this.db.prepare('SELECT * FROM wearers WHERE business_connection_id = ?').get(connectionId) as WearerRow | undefined
+  wearerByConnection(connectionId: string): Promise<WearerRow | undefined> {
+    return this.get<WearerRow>('SELECT tg_id, name, business_connection_id, connected, can_reply FROM wearers WHERE business_connection_id = ?', [connectionId])
   }
 
-  upsertContact(wearerTgId: number, c: ContactRow): void {
-    this.db
-      .prepare(
-        `INSERT INTO contacts (wearer_tg_id, tg_id, chat_id, name, last_incoming_at) VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(wearer_tg_id, tg_id) DO UPDATE SET chat_id = excluded.chat_id, name = excluded.name, last_incoming_at = excluded.last_incoming_at`,
-      )
-      .run(wearerTgId, c.tg_id, c.chat_id, c.name, c.last_incoming_at)
+  async upsertContact(wearerTgId: number, c: ContactRow): Promise<void> {
+    await this.run(
+      `INSERT INTO contacts (wearer_tg_id, tg_id, chat_id, name, last_incoming_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(wearer_tg_id, tg_id) DO UPDATE SET chat_id = excluded.chat_id, name = excluded.name, last_incoming_at = excluded.last_incoming_at`,
+      [wearerTgId, c.tg_id, c.chat_id, c.name, c.last_incoming_at],
+    )
   }
 
   /** Most recent first, limited to people who wrote within the window (Telegram's 24 h business reply rule). */
-  contacts(wearerTgId: number, sinceISO: string, limit = 20): ContactRow[] {
-    return this.db
-      .prepare('SELECT tg_id, chat_id, name, last_incoming_at FROM contacts WHERE wearer_tg_id = ? AND last_incoming_at > ? ORDER BY last_incoming_at DESC LIMIT ?')
-      .all(wearerTgId, sinceISO, limit) as unknown as ContactRow[]
+  contacts(wearerTgId: number, sinceISO: string, limit = 20): Promise<ContactRow[]> {
+    return this.all<ContactRow>('SELECT tg_id, chat_id, name, last_incoming_at FROM contacts WHERE wearer_tg_id = ? AND last_incoming_at > ? ORDER BY last_incoming_at DESC LIMIT ?', [wearerTgId, sinceISO, limit])
   }
 
-  contact(wearerTgId: number, tgId: number): ContactRow | undefined {
-    return this.db.prepare('SELECT tg_id, chat_id, name, last_incoming_at FROM contacts WHERE wearer_tg_id = ? AND tg_id = ?').get(wearerTgId, tgId) as ContactRow | undefined
+  contact(wearerTgId: number, tgId: number): Promise<ContactRow | undefined> {
+    return this.get<ContactRow>('SELECT tg_id, chat_id, name, last_incoming_at FROM contacts WHERE wearer_tg_id = ? AND tg_id = ?', [wearerTgId, tgId])
   }
 
-  saveAgreement(a: Agreement, deviceId: string, at: string): void {
-    this.db
-      .prepare(
-        `INSERT INTO agreements (id, device_id, wearer_tg_id, status, json, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET status = excluded.status, json = excluded.json, updated_at = excluded.updated_at`,
-      )
-      .run(a.id, deviceId, a.wearerTgId, a.status, JSON.stringify(a), at)
+  async saveAgreement(a: Agreement, deviceId: string, at: string): Promise<void> {
+    await this.run(
+      `INSERT INTO agreements (id, device_id, wearer_tg_id, status, json, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET status = excluded.status, json = excluded.json, updated_at = excluded.updated_at`,
+      [a.id, deviceId, a.wearerTgId, a.status, JSON.stringify(a), at],
+    )
   }
 
-  agreement(id: string): { agreement: Agreement; deviceId: string } | undefined {
-    const row = this.db.prepare('SELECT json, device_id FROM agreements WHERE id = ?').get(id) as { json: string; device_id: string } | undefined
+  async agreement(id: string): Promise<{ agreement: Agreement; deviceId: string } | undefined> {
+    const row = await this.get<{ json: string; device_id: string }>('SELECT json, device_id FROM agreements WHERE id = ?', [id])
     return row ? { agreement: JSON.parse(row.json) as Agreement, deviceId: row.device_id } : undefined
   }
 
-  agreementsForDevice(deviceId: string, limit = 20): Agreement[] {
-    return (this.db
-      .prepare("SELECT json FROM agreements WHERE device_id = ? AND status NOT IN ('discarded') ORDER BY updated_at DESC LIMIT ?")
-      .all(deviceId, limit) as { json: string }[]).map(r => JSON.parse(r.json) as Agreement)
+  async agreementsForDevice(deviceId: string, limit = 20): Promise<Agreement[]> {
+    const rows = await this.all<{ json: string }>("SELECT json FROM agreements WHERE device_id = ? AND status NOT IN ('discarded') ORDER BY updated_at DESC LIMIT ?", [deviceId, limit])
+    return rows.map(r => JSON.parse(r.json) as Agreement)
   }
 
-  insertDraft(agreementId: string, d: DraftRow, expiresAt: string): void {
-    this.db
-      .prepare('INSERT INTO drafts (agreement_id, utterances_json, proposal_json, wearer_speaker, contact_tg_id, captured_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(agreementId, JSON.stringify(d.utterances), JSON.stringify(d.proposal), d.wearerSpeaker, d.contactTgId, d.capturedAt, expiresAt)
+  async insertDraft(agreementId: string, d: DraftRow, expiresAt: string): Promise<void> {
+    await this.run(
+      'INSERT INTO drafts (agreement_id, utterances_json, proposal_json, wearer_speaker, contact_tg_id, captured_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [agreementId, JSON.stringify(d.utterances), JSON.stringify(d.proposal), d.wearerSpeaker, d.contactTgId, d.capturedAt, expiresAt],
+    )
   }
 
   /** UPDATE only: never resurrects a purged or deleted draft. Returns false when the draft is gone. */
-  updateDraftChoice(agreementId: string, wearerSpeaker: number, contactTgId: number | null): boolean {
-    const r = this.db.prepare('UPDATE drafts SET wearer_speaker = ?, contact_tg_id = ? WHERE agreement_id = ?').run(wearerSpeaker, contactTgId, agreementId)
-    return Number(r.changes) === 1
+  async updateDraftChoice(agreementId: string, wearerSpeaker: number, contactTgId: number | null): Promise<boolean> {
+    return (await this.run('UPDATE drafts SET wearer_speaker = ?, contact_tg_id = ? WHERE agreement_id = ?', [wearerSpeaker, contactTgId, agreementId])) === 1
   }
 
-  draft(agreementId: string): DraftRow | undefined {
-    const row = this.db.prepare('SELECT * FROM drafts WHERE agreement_id = ?').get(agreementId) as
-      | { utterances_json: string; proposal_json: string; wearer_speaker: number; contact_tg_id: number | null; captured_at: string }
-      | undefined
+  async draft(agreementId: string): Promise<DraftRow | undefined> {
+    const row = await this.get<{ utterances_json: string; proposal_json: string; wearer_speaker: number; contact_tg_id: number | null; captured_at: string }>(
+      'SELECT utterances_json, proposal_json, wearer_speaker, contact_tg_id, captured_at FROM drafts WHERE agreement_id = ?',
+      [agreementId],
+    )
     if (!row) return undefined
     return {
       utterances: JSON.parse(row.utterances_json) as Utterance[],
@@ -159,52 +187,48 @@ export class Db {
   }
 
   /** Transcripts of unconfirmed drafts are deleted after 24 h; confirmed ones only keep commitments (PRD §6). */
-  deleteDraft(agreementId: string): void {
-    this.db.prepare('DELETE FROM drafts WHERE agreement_id = ?').run(agreementId)
+  async deleteDraft(agreementId: string): Promise<void> {
+    await this.run('DELETE FROM drafts WHERE agreement_id = ?', [agreementId])
   }
 
-  purgeExpiredDrafts(now: string): number {
-    return Number(this.db.prepare('DELETE FROM drafts WHERE expires_at <= ?').run(now).changes)
+  purgeExpiredDrafts(now: string): Promise<number> {
+    return this.run('DELETE FROM drafts WHERE expires_at <= ?', [now])
   }
 
-  startAmend(tgId: number, agreementId: string, at: string): void {
-    this.db.prepare('INSERT OR REPLACE INTO amend_sessions (tg_id, agreement_id, started_at) VALUES (?, ?, ?)').run(tgId, agreementId, at)
+  async startAmend(tgId: number, agreementId: string, at: string): Promise<void> {
+    await this.run('INSERT OR REPLACE INTO amend_sessions (tg_id, agreement_id, started_at) VALUES (?, ?, ?)', [tgId, agreementId, at])
   }
 
   /** Open amend session started after `sinceISO` (sessions expire); not consumed until the amendment succeeds. */
-  peekAmend(tgId: number, sinceISO: string): string | undefined {
-    const row = this.db.prepare('SELECT agreement_id FROM amend_sessions WHERE tg_id = ? AND started_at > ?').get(tgId, sinceISO) as { agreement_id: string } | undefined
-    return row?.agreement_id
+  async peekAmend(tgId: number, sinceISO: string): Promise<string | undefined> {
+    return (await this.get<{ agreement_id: string }>('SELECT agreement_id FROM amend_sessions WHERE tg_id = ? AND started_at > ?', [tgId, sinceISO]))?.agreement_id
   }
 
-  endAmend(tgId: number): void {
-    this.db.prepare('DELETE FROM amend_sessions WHERE tg_id = ?').run(tgId)
+  async endAmend(tgId: number): Promise<void> {
+    await this.run('DELETE FROM amend_sessions WHERE tg_id = ?', [tgId])
   }
 
-  saveChecklist(r: ChecklistRow): void {
-    this.db.prepare('INSERT OR REPLACE INTO checklists (agreement_id, business_connection_id, chat_id, message_id) VALUES (?, ?, ?, ?)').run(r.agreement_id, r.business_connection_id, r.chat_id, r.message_id)
+  async saveChecklist(r: ChecklistRow): Promise<void> {
+    await this.run('INSERT OR REPLACE INTO checklists (agreement_id, business_connection_id, chat_id, message_id) VALUES (?, ?, ?, ?)', [r.agreement_id, r.business_connection_id, r.chat_id, r.message_id])
   }
 
   /** Scoped to the business connection: two wearers can share a counterparty chat id. */
-  checklistByMessage(connectionId: string, chatId: number, messageId: number): ChecklistRow | undefined {
-    return this.db
-      .prepare('SELECT * FROM checklists WHERE business_connection_id = ? AND chat_id = ? AND message_id = ?')
-      .get(connectionId, chatId, messageId) as ChecklistRow | undefined
+  checklistByMessage(connectionId: string, chatId: number, messageId: number): Promise<ChecklistRow | undefined> {
+    return this.get<ChecklistRow>('SELECT agreement_id, business_connection_id, chat_id, message_id FROM checklists WHERE business_connection_id = ? AND chat_id = ? AND message_id = ?', [connectionId, chatId, messageId])
   }
 
-  countDevicesForWearer(tgId: number): number {
-    return Number((this.db.prepare('SELECT COUNT(*) AS n FROM devices WHERE wearer_tg_id = ?').get(tgId) as { n: number }).n)
+  async countDevicesForWearer(tgId: number): Promise<number> {
+    return Number((await this.get<{ n: number }>('SELECT COUNT(*) AS n FROM devices WHERE wearer_tg_id = ?', [tgId]))?.n ?? 0)
   }
 
   /** Agreements awaiting the counterparty for longer than the TTL (PRD §5: expire after 7 days). */
-  staleAwaiting(beforeISO: string): { agreement: Agreement; deviceId: string }[] {
-    return (this.db
-      .prepare("SELECT json, device_id FROM agreements WHERE status IN ('sent', 'amended') AND updated_at <= ?")
-      .all(beforeISO) as { json: string; device_id: string }[]).map(r => ({ agreement: JSON.parse(r.json) as Agreement, deviceId: r.device_id }))
+  async staleAwaiting(beforeISO: string): Promise<{ agreement: Agreement; deviceId: string }[]> {
+    const rows = await this.all<{ json: string; device_id: string }>("SELECT json, device_id FROM agreements WHERE status IN ('sent', 'amended') AND updated_at <= ?", [beforeISO])
+    return rows.map(r => ({ agreement: JSON.parse(r.json) as Agreement, deviceId: r.device_id }))
   }
 
   /** Contacts outside Telegram's 24 h window can't be messaged anyway; don't keep their names. */
-  pruneContacts(beforeISO: string): number {
-    return Number(this.db.prepare('DELETE FROM contacts WHERE last_incoming_at <= ?').run(beforeISO).changes)
+  pruneContacts(beforeISO: string): Promise<number> {
+    return this.run('DELETE FROM contacts WHERE last_incoming_at <= ?', [beforeISO])
   }
 }

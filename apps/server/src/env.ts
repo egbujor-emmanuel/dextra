@@ -11,7 +11,11 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().optional(),
   GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
   ANTHROPIC_API_KEY: z.string().optional(),
+  /** Local SQLite file, used when DATABASE_URL is not set. */
   DATABASE_PATH: z.string().default('./data/dextra.db'),
+  /** Turso in production (libsql://…); data then survives restarts on hosts with an ephemeral disk. */
+  DATABASE_URL: z.string().regex(/^(libsql|https|file):/, 'DATABASE_URL must start with libsql:, https: or file:').optional(),
+  DATABASE_AUTH_TOKEN: z.string().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -19,5 +23,7 @@ export type Env = z.infer<typeof envSchema>
 /** Missing keys are allowed at boot; the features that need them return typed errors instead. */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const cleaned = Object.fromEntries(Object.entries(source).filter(([, v]) => v !== ''))
+  // Render sets RENDER_EXTERNAL_URL to the service's public https address; use it unless one is given explicitly.
+  if (!cleaned.PUBLIC_BASE_URL && cleaned.RENDER_EXTERNAL_URL) cleaned.PUBLIC_BASE_URL = cleaned.RENDER_EXTERNAL_URL
   return envSchema.parse(cleaned)
 }

@@ -1,0 +1,33 @@
+# Render Blueprint for the DEXTRA server (free plan). Secrets are prompted for in the dashboard, or set by
+# scripts/deploy/render-deploy.mjs. Data lives in Turso (DATABASE_URL), because Render's free disk is wiped on restart.
+services:
+  - type: web
+    name: dextra
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: master
+    buildCommand: npm ci --include=dev
+    startCommand: npm start -w @dextra/server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24.18.0
+      - key: TELEGRAM_ENV
+        value: prod
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_AUTH_TOKEN
+        sync: false

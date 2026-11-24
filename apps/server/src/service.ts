@@ -16,7 +16,7 @@ import {
   type Proposal,
   type Utterance,
 } from '@dextra/core'
-import type { ContactRow, Db } from './db'
+import type { ContactRow, Db, DraftRow } from './db'
 import { ServiceError } from './errors'
 import type { Amendment, Extractor } from './extract'
 import type { Hub } from './hub'
@@ -70,48 +70,48 @@ export class AgreementService {
     return next
   }
 
-  private contactsFor(wearerTgId: number): ContactRow[] {
+  private contactsFor(wearerTgId: number): Promise<ContactRow[]> {
     return this.d.db.contacts(wearerTgId, this.nowISO(-REPLY_WINDOW_MS))
   }
 
   // ── devices & pairing ────────────────────────────────────────────────
-  registerDevice(): { deviceId: string; deviceToken: string } {
+  async registerDevice(): Promise<{ deviceId: string; deviceToken: string }> {
     const deviceId = newId('dev')
     const deviceToken = newToken()
-    this.d.db.insertDevice(deviceId, hashToken(deviceToken), this.nowISO())
+    await this.d.db.insertDevice(deviceId, hashToken(deviceToken), this.nowISO())
     return { deviceId, deviceToken }
   }
 
-  authenticate(token: string | undefined): string {
-    const row = token ? this.d.db.deviceByTokenHash(hashToken(token)) : undefined
+  async authenticate(token: string | undefined): Promise<string> {
+    const row = token ? await this.d.db.deviceByTokenHash(hashToken(token)) : undefined
     if (!row) throw new ServiceError('UNAUTHORIZED', 'This device is not registered.', 401)
     return row.id
   }
 
-  issuePairCode(deviceId: string): { code: string; expiresAt: string; botUsername: string } {
-    if (this.d.db.device(deviceId)?.wearer_tg_id) throw new ServiceError('ALREADY_PAIRED', 'These glasses are already linked.', 409)
+  async issuePairCode(deviceId: string): Promise<{ code: string; expiresAt: string; botUsername: string }> {
+    if ((await this.d.db.device(deviceId))?.wearer_tg_id) throw new ServiceError('ALREADY_PAIRED', 'These glasses are already linked.', 409)
     const code = newPairCode()
     const expiresAt = this.nowISO(PAIR_TTL_MS)
-    this.d.db.savePairCode(code, deviceId, expiresAt)
+    await this.d.db.savePairCode(code, deviceId, expiresAt)
     return { code, expiresAt, botUsername: this.d.botUsername }
   }
 
   /** Called by the bot when the wearer sends /pair CODE. Never re-binds an already linked device. */
-  redeemPairCode(code: string, tgId: number, name: string): 'ok' | 'invalid' | 'limit' {
-    const deviceId = this.d.db.takePairCode(code.trim().toUpperCase(), this.nowISO())
-    if (!deviceId || this.d.db.device(deviceId)?.wearer_tg_id) return 'invalid'
-    if (this.d.db.countDevicesForWearer(tgId) >= MAX_DEVICES_PER_WEARER) return 'limit'
+  async redeemPairCode(code: string, tgId: number, name: string): Promise<'ok' | 'invalid' | 'limit'> {
+    const deviceId = await this.d.db.takePairCode(code.trim().toUpperCase(), this.nowISO())
+    if (!deviceId || (await this.d.db.device(deviceId))?.wearer_tg_id) return 'invalid'
+    if ((await this.d.db.countDevicesForWearer(tgId)) >= MAX_DEVICES_PER_WEARER) return 'limit'
     const clean = safeName(name)
-    this.d.db.upsertWearer(tgId, clean, this.nowISO())
-    this.d.db.bindDevice(deviceId, tgId)
+    await this.d.db.upsertWearer(tgId, clean, this.nowISO())
+    await this.d.db.bindDevice(deviceId, tgId)
     this.d.hub.publish(deviceId, { type: 'paired', wearerName: clean })
     return 'ok'
   }
 
-  deviceState(deviceId: string): DeviceState {
-    const dev = this.d.db.device(deviceId)
-    const wearer = dev?.wearer_tg_id ? this.d.db.wearer(dev.wearer_tg_id) : undefined
-    const list = this.d.db.agreementsForDevice(deviceId, 50)
+  async deviceState(deviceId: string): Promise<DeviceState> {
+    const dev = await this.d.db.device(deviceId)
+    const wearer = dev?.wearer_tg_id ? await this.d.db.wearer(dev.wearer_tg_id) : undefined
+    const list = await this.d.db.agreementsForDevice(deviceId, 50)
     const soon = Date.parse(this.nowISO(DUE_SOON_MS))
     const open = list.filter(a => a.status === 'sent' || a.status === 'amended' || a.status === 'confirmed')
     const dueSoon = open.flatMap(a => a.commitments).filter(c => !c.done && c.dueISO && Date.parse(c.dueISO) <= soon).length
@@ -120,14 +120,14 @@ export class AgreementService {
 
   // ── capture → draft ─────────────────────────────────────────────────
   /** Throws NOT_PAIRED. Called before reading any request body. */
-  wearerOf(deviceId: string): number {
-    const tg = this.d.db.device(deviceId)?.wearer_tg_id
+  async wearerOf(deviceId: string): Promise<number> {
+    const tg = (await this.d.db.device(deviceId))?.wearer_tg_id
     if (!tg) throw new ServiceError('NOT_PAIRED', 'Link your Telegram first: send /pair with the code on your lens.', 409)
     return tg
   }
 
   async captureAudio(deviceId: string, wav: Uint8Array): Promise<{ agreement: AgreementView; contacts: Contact[] }> {
-    this.wearerOf(deviceId)
+    await this.wearerOf(deviceId)
     let pcm
     try {
       pcm = parseWav(wav)
@@ -144,7 +144,7 @@ export class AgreementService {
   }
 
   async captureUtterances(deviceId: string, heard: Utterance[]): Promise<{ agreement: AgreementView; contacts: Contact[] }> {
-    const wearerTgId = this.wearerOf(deviceId)
+    const wearerTgId = await this.wearerOf(deviceId)
     if (heard.length === 0) throw new ServiceError('NO_SPEECH', 'No speech was heard in the last 45 seconds.')
     const proposal = await this.d.extractor.propose(heard)
     // Voice separation fails on short clips; then the proposed per-line turns are used (marked as inferred).
@@ -152,12 +152,12 @@ export class AgreementService {
     const pick = pickWearer(utterances, [])
     const capturedAt = this.nowISO()
     const id = newId('agr')
-    const contacts = this.contactsFor(wearerTgId)
+    const contacts = await this.contactsFor(wearerTgId)
     const built = this.build(proposal, utterances, pick.wearer, capturedAt)
     const contact = contacts[matchContact(contacts, proposal.counterpartyName)]
     const agreement = createDraft({ id, createdAt: capturedAt, wearerTgId, counterpartyName: contact?.name ?? safeName(proposal.counterpartyName ?? 'them'), commitments: built })
-    this.d.db.saveAgreement(agreement, deviceId, capturedAt)
-    this.d.db.insertDraft(id, { utterances, proposal, wearerSpeaker: pick.wearer, contactTgId: contact?.tg_id ?? null, capturedAt }, this.nowISO(DRAFT_TTL_MS))
+    await this.d.db.saveAgreement(agreement, deviceId, capturedAt)
+    await this.d.db.insertDraft(id, { utterances, proposal, wearerSpeaker: pick.wearer, contactTgId: contact?.tg_id ?? null, capturedAt }, this.nowISO(DRAFT_TTL_MS))
     return {
       agreement: toView(agreement, { warnings: this.warnings(utterances, inferred ? 'low' : pick.confidence, inferred), contact: contactView(contact) }),
       contacts: contacts.map(contactView).filter(isDefined),
@@ -186,49 +186,49 @@ export class AgreementService {
   }
 
   // ── wearer actions on the lens ──────────────────────────────────────
-  private owned(deviceId: string, id: string): Agreement {
-    const row = this.d.db.agreement(id)
+  private async owned(deviceId: string, id: string): Promise<Agreement> {
+    const row = await this.d.db.agreement(id)
     if (!row || row.deviceId !== deviceId) throw new ServiceError('NOT_FOUND', 'That agreement is gone.', 404)
     return row.agreement
   }
 
-  private draftOf(id: string, a: Agreement) {
-    const draft = this.d.db.draft(id)
+  private async draftOf(id: string, a: Agreement): Promise<DraftRow> {
+    const draft = await this.d.db.draft(id)
     if (a.status !== 'draft') throw new ServiceError('INVALID_TRANSITION', 'This agreement was already sent.', 409)
     if (!draft) throw new ServiceError('DRAFT_EXPIRED', 'This draft expired. Hold to lock again.', 410)
     return draft
   }
 
-  private persist(deviceId: string, a: Agreement, extra: { warnings?: string[]; contact?: Contact } = {}): AgreementView {
-    this.d.db.saveAgreement(a, deviceId, this.nowISO())
+  private async persist(deviceId: string, a: Agreement, extra: { warnings?: string[]; contact?: Contact } = {}): Promise<AgreementView> {
+    await this.d.db.saveAgreement(a, deviceId, this.nowISO())
     const view = toView(a, extra)
     this.d.hub.publish(deviceId, { type: 'agreement', agreement: view })
     return view
   }
 
   swap(deviceId: string, id: string): Promise<AgreementView> {
-    return this.serial(id, () => {
-      const a = this.owned(deviceId, id)
-      const draft = this.draftOf(id, a)
+    return this.serial(id, async () => {
+      const a = await this.owned(deviceId, id)
+      const draft = await this.draftOf(id, a)
       const speakers = [...new Set(draft.utterances.map(u => u.speaker))]
       const next = speakers.find(s => s !== draft.wearerSpeaker) ?? draft.wearerSpeaker
       const commitments = this.build(draft.proposal, draft.utterances, next, draft.capturedAt)
-      if (!this.d.db.updateDraftChoice(id, next, draft.contactTgId)) throw new ServiceError('DRAFT_EXPIRED', 'This draft expired. Hold to lock again.', 410)
-      const contact = draft.contactTgId ? this.d.db.contact(a.wearerTgId, draft.contactTgId) : undefined
-      return this.persist(deviceId, { ...a, commitments }, { contact: contactView(contact) })
+      if (!await this.d.db.updateDraftChoice(id, next, draft.contactTgId)) throw new ServiceError('DRAFT_EXPIRED', 'This draft expired. Hold to lock again.', 410)
+      const contact = draft.contactTgId ? await this.d.db.contact(a.wearerTgId, draft.contactTgId) : undefined
+      return await this.persist(deviceId, { ...a, commitments }, { contact: contactView(contact) })
     })
   }
 
   nextContact(deviceId: string, id: string): Promise<AgreementView> {
-    return this.serial(id, () => {
-      const a = this.owned(deviceId, id)
-      const draft = this.draftOf(id, a)
-      const contacts = this.contactsFor(a.wearerTgId)
+    return this.serial(id, async () => {
+      const a = await this.owned(deviceId, id)
+      const draft = await this.draftOf(id, a)
+      const contacts = await this.contactsFor(a.wearerTgId)
       if (contacts.length === 0) throw new ServiceError('NO_CONTACTS', 'No one has messaged you on Telegram in the last 24 h, so there is no one to send to yet.', 409)
       const current = contacts.findIndex(c => c.tg_id === draft.contactTgId)
       const contact = contacts[(current + 1) % contacts.length]!
-      if (!this.d.db.updateDraftChoice(id, draft.wearerSpeaker, contact.tg_id)) throw new ServiceError('DRAFT_EXPIRED', 'This draft expired. Hold to lock again.', 410)
-      return this.persist(deviceId, { ...a, counterpartyName: contact.name }, { contact: contactView(contact) })
+      if (!await this.d.db.updateDraftChoice(id, draft.wearerSpeaker, contact.tg_id)) throw new ServiceError('DRAFT_EXPIRED', 'This draft expired. Hold to lock again.', 410)
+      return await this.persist(deviceId, { ...a, counterpartyName: contact.name }, { contact: contactView(contact) })
     })
   }
 
@@ -238,60 +238,60 @@ export class AgreementService {
    */
   send(deviceId: string, id: string, expectedContactId?: string): Promise<AgreementView> {
     return this.serial(id, async () => {
-      const a = this.owned(deviceId, id)
-      const draft = this.draftOf(id, a)
-      const wearer = this.d.db.wearer(a.wearerTgId)
+      const a = await this.owned(deviceId, id)
+      const draft = await this.draftOf(id, a)
+      const wearer = await this.d.db.wearer(a.wearerTgId)
       if (!wearer?.business_connection_id || !wearer.connected) throw new ServiceError('NO_BUSINESS_CONNECTION', 'Add Dextra in Telegram ▸ Settings ▸ Chat Automation, then tap again.', 409)
       if (!wearer.can_reply) throw new ServiceError('CANNOT_REPLY', 'Give Dextra permission to reply in Chat Automation settings, then tap again.', 409)
-      const contact = draft.contactTgId ? this.contactsFor(a.wearerTgId).find(c => c.tg_id === draft.contactTgId) : undefined
+      const contact = draft.contactTgId ? (await this.contactsFor(a.wearerTgId)).find(c => c.tg_id === draft.contactTgId) : undefined
       if (!contact) throw new ServiceError('CANNOT_REPLY', 'Telegram only lets Dextra message people who wrote to you in the last 24 h. Swipe to pick someone else.', 409)
       if (expectedContactId && expectedContactId !== String(contact.tg_id)) throw new ServiceError('RECIPIENT_CHANGED', 'The recipient changed. Check the card and tap again.', 409)
       const sent = transition({ ...a, counterpartyName: contact.name }, { type: 'send', at: this.nowISO(), counterpartyTgId: contact.tg_id })
-      this.d.db.saveAgreement(sent, deviceId, this.nowISO())
+      await this.d.db.saveAgreement(sent, deviceId, this.nowISO())
       try {
         await this.d.messenger.sendAgreementCard({ businessConnectionId: wearer.business_connection_id, chatId: contact.chat_id, wearerName: wearer.name, agreement: sent, reviewUrl: `https://t.me/${this.d.botUsername}?start=a_${id}` })
       } catch {
-        this.d.db.saveAgreement(a, deviceId, this.nowISO())
+        await this.d.db.saveAgreement(a, deviceId, this.nowISO())
         throw new ServiceError('CANNOT_REPLY', 'Telegram did not deliver it (the 24 h reply window may have closed). Nothing was sent.', 409)
       }
-      return this.persist(deviceId, sent, { contact: contactView(contact) })
+      return await this.persist(deviceId, sent, { contact: contactView(contact) })
     })
   }
 
   discard(deviceId: string, id: string): Promise<AgreementView> {
-    return this.serial(id, () => {
-      const a = transition(this.owned(deviceId, id), { type: 'discard', at: this.nowISO() })
-      this.d.db.deleteDraft(id)
-      return this.persist(deviceId, scrub(a))
+    return this.serial(id, async () => {
+      const a = transition(await this.owned(deviceId, id), { type: 'discard', at: this.nowISO() })
+      await this.d.db.deleteDraft(id)
+      return await this.persist(deviceId, scrub(a))
     })
   }
 
   accept(deviceId: string, id: string): Promise<AgreementView> {
-    return this.serial(id, () => this.finalize(deviceId, transition(this.owned(deviceId, id), { type: 'accept', at: this.nowISO() })))
+    return this.serial(id, async () => this.finalize(deviceId, transition(await this.owned(deviceId, id), { type: 'accept', at: this.nowISO() })))
   }
 
   reject(deviceId: string, id: string): Promise<AgreementView> {
     return this.serial(id, async () => {
-      const a = transition(this.owned(deviceId, id), { type: 'reject', at: this.nowISO() })
+      const a = transition(await this.owned(deviceId, id), { type: 'reject', at: this.nowISO() })
       if (a.counterpartyTgId) await this.d.messenger.notify(a.counterpartyTgId, 'Your change was not accepted. The original version still stands — tap Change again to propose something else.').catch(() => undefined)
-      return this.persist(deviceId, a)
+      return await this.persist(deviceId, a)
     })
   }
 
-  list(deviceId: string): AgreementView[] {
-    return this.d.db.agreementsForDevice(deviceId).map(a => toView(a))
+  async list(deviceId: string): Promise<AgreementView[]> {
+    return (await this.d.db.agreementsForDevice(deviceId)).map(a => toView(a))
   }
 
   // ── counterparty actions (from the bot) ─────────────────────────────
-  forCounterparty(id: string, tgId: number): Agreement {
-    const row = this.d.db.agreement(id)
+  async forCounterparty(id: string, tgId: number): Promise<Agreement> {
+    const row = await this.d.db.agreement(id)
     if (!row || row.agreement.counterpartyTgId !== tgId) throw new ServiceError('NOT_FOUND', 'This agreement was not found.', 404)
     return row.agreement
   }
 
   confirm(id: string, tgId: number): Promise<Agreement> {
     return this.serial(id, async () => {
-      const row = this.d.db.agreement(id)
+      const row = await this.d.db.agreement(id)
       if (!row || row.agreement.counterpartyTgId !== tgId) throw new ServiceError('NOT_FOUND', 'This agreement was not found.', 404)
       const confirmed = transition(row.agreement, { type: 'confirm', at: this.nowISO(), by: tgId })
       await this.finalize(row.deviceId, confirmed)
@@ -301,13 +301,13 @@ export class AgreementService {
 
   amend(id: string, tgId: number, note: string): Promise<Agreement> {
     return this.serial(id, async () => {
-      const before = this.forCounterparty(id, tgId)
+      const before = await this.forCounterparty(id, tgId)
       if (before.status !== 'sent') throw new ServiceError('INVALID_TRANSITION', 'This agreement can no longer be changed.', 409)
       const changes = await this.d.extractor.amend(before.commitments, note)
-      const fresh = this.forCounterparty(id, tgId) // re-read after the LLM call: a confirm may have landed meanwhile
+      const fresh = await this.forCounterparty(id, tgId) // re-read after the LLM call: a confirm may have landed meanwhile
       const proposed = applyAmendment(fresh.commitments, changes, note, this.nowISO())
       const amended = transition(fresh, { type: 'amend', at: this.nowISO(), by: tgId, commitments: proposed, note: note.slice(0, 200) })
-      this.persist(this.d.db.agreement(id)!.deviceId, amended)
+      await this.persist((await this.d.db.agreement(id))!.deviceId, amended)
       return amended
     })
   }
@@ -315,15 +315,15 @@ export class AgreementService {
   /** Confirmed: state + hash are saved first; the shared checklist is best-effort and never blocks the confirmation. */
   private async finalize(deviceId: string, a: Agreement): Promise<AgreementView> {
     const withHash = { ...a, hash: agreementHash(a) }
-    const view = this.persist(deviceId, withHash)
-    this.d.db.deleteDraft(a.id)
-    const wearer = this.d.db.wearer(a.wearerTgId)
-    const contact = a.counterpartyTgId ? this.d.db.contact(a.wearerTgId, a.counterpartyTgId) : undefined
+    const view = await this.persist(deviceId, withHash)
+    await this.d.db.deleteDraft(a.id)
+    const wearer = await this.d.db.wearer(a.wearerTgId)
+    const contact = a.counterpartyTgId ? await this.d.db.contact(a.wearerTgId, a.counterpartyTgId) : undefined
     if (wearer?.business_connection_id && contact && withHash.commitments.length > 0) {
       try {
         const tasks = withHash.commitments.map(c => checklistTask(c, a.counterpartyName, wearer.name))
         const { messageId } = await this.d.messenger.postChecklist({ businessConnectionId: wearer.business_connection_id, chatId: contact.chat_id, title: `Agreed · ${wearer.name} & ${a.counterpartyName}`, tasks })
-        this.d.db.saveChecklist({ agreement_id: a.id, business_connection_id: wearer.business_connection_id, chat_id: contact.chat_id, message_id: messageId })
+        await this.d.db.saveChecklist({ agreement_id: a.id, business_connection_id: wearer.business_connection_id, chat_id: contact.chat_id, message_id: messageId })
       } catch {
         this.d.log?.('[dextra] checklist not posted (Telegram refused); agreement stays confirmed')
       }
@@ -332,11 +332,11 @@ export class AgreementService {
   }
 
   /** Checklist ticks from Telegram (task ids are 1-based commitment positions), scoped to the wearer's connection. */
-  tick(connectionId: string, chatId: number, messageId: number, doneTaskIds: number[], undoneTaskIds: number[]): Promise<void> {
-    const link = this.d.db.checklistByMessage(connectionId, chatId, messageId)
-    if (!link) return Promise.resolve()
-    return this.serial(link.agreement_id, () => {
-      const row = this.d.db.agreement(link.agreement_id)
+  async tick(connectionId: string, chatId: number, messageId: number, doneTaskIds: number[], undoneTaskIds: number[]): Promise<void> {
+    const link = await this.d.db.checklistByMessage(connectionId, chatId, messageId)
+    if (!link) return
+    return this.serial(link.agreement_id, async () => {
+      const row = await this.d.db.agreement(link.agreement_id)
       if (!row) return
       let a = row.agreement
       for (const [ids, done] of [[doneTaskIds, true], [undoneTaskIds, false]] as const) {
@@ -345,19 +345,19 @@ export class AgreementService {
           if (c && c.done !== done && (a.status === 'confirmed' || a.status === 'fulfilled')) a = transition(a, { type: 'tick', at: this.nowISO(), commitmentId: c.id, done })
         }
       }
-      if (a !== row.agreement) this.persist(row.deviceId, a)
+      if (a !== row.agreement) await this.persist(row.deviceId, a)
     })
   }
 
   // ── housekeeping ────────────────────────────────────────────────────
   /** Expire agreements nobody answered within 7 days, scrub their content, prune stale drafts and contacts. */
   async housekeeping(): Promise<{ expired: number }> {
-    const stale = this.d.db.staleAwaiting(this.nowISO(-AWAIT_TTL_MS))
+    const stale = await this.d.db.staleAwaiting(this.nowISO(-AWAIT_TTL_MS))
     for (const { agreement, deviceId } of stale) {
       await this.serial(agreement.id, () => this.persist(deviceId, scrub(transition(agreement, { type: 'expire', at: this.nowISO() })))).catch(() => undefined)
     }
-    this.d.db.purgeExpiredDrafts(this.nowISO())
-    this.d.db.pruneContacts(this.nowISO(-REPLY_WINDOW_MS))
+    await this.d.db.purgeExpiredDrafts(this.nowISO())
+    await this.d.db.pruneContacts(this.nowISO(-REPLY_WINDOW_MS))
     return { expired: stale.length }
   }
 }
