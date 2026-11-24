@@ -1,0 +1,26 @@
+{
+  "name": "dextra",
+  "private": true,
+  "version": "0.1.0",
+  "description": "DEXTRA: say it out loud, and the other person confirms it in Telegram. Even G2 plugin + Telegram business bot. Dictum, factum.",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev:glasses": "npm run dev -w @dextra/glasses",
+    "dev:server": "npm run dev -w @dextra/server",
+    "sim": "evenhub-simulator http://localhost:5173 --automation-port 9898 --no-glow",
+    "e2e": "node scripts/e2e-sim.mjs"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "devDependencies": {
+    "pngjs": "7.0.0"
+  }
+}

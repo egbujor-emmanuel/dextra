@@ -1,0 +1,28 @@
+# DEXTRA threat model: invariants and proving tests
+
+Each invariant is listed with the test that proves it. If a row has no test, it is marked **gap**.
+
+| # | Invariant | Threat it blocks | Enforced in | Proved by |
+|---|---|---|---|---|
+| 1 | A commitment reaches the lens only if its quote appears in what **that speaker** said | LLM hallucination; prompt injection inventing obligations (e.g. "pay $5,000") | `packages/core/src/validate.ts` | `core/test/validate.test.ts` › *drops commitments the transcript does not support*, *requires the quote to come from the attributed speaker*; `server/test/service.test.ts` › *keeps only quote-backed commitments* |
+| 2 | Malformed LLM output is refused, never trusted | Schema confusion, partial JSON | `validate.ts` (zod) | `validate.test.ts` › *rejects malformed proposals* |
+| 3 | Only the counterparty can confirm or amend | A third party confirming someone else's agreement | `core/src/state.ts`, `server/src/service.ts` `forCounterparty` | `state.test.ts` › *rejects confirmation by someone other than the counterparty*; `service.test.ts` › *only the counterparty can confirm* |
+| 4 | Illegal state transitions throw a typed error | Replayed or out-of-order actions (confirming a discarded draft, etc.) | `state.ts` `ALLOWED` table | `state.test.ts` › *rejects illegal transitions with a typed error* |
+| 5 | Amendments can only edit or remove existing commitments, never add new ones | A counterparty slipping a new obligation onto the wearer | `service.ts` `applyAmendment` | `service.test.ts` › *applyAmendment only edits or removes existing commitments* |
+| 6 | Every data route needs a device bearer token; tokens are stored hashed | Device impersonation | `service.ts` `authenticate`, `ids.ts` `hashToken` | `http-wav-stt.test.ts` › *returns the typed refusal envelope for unauthenticated calls*; `service.test.ts` › *rejects unknown tokens* |
+| 7 | Agreements are only reachable by the device that created them | Cross-device access (IDOR) | `service.ts` `owned` | `service.test.ts` › *another device cannot touch this agreement* |
+| 8 | Pairing codes are single-use and expire after 10 min | Pairing replay, brute force | `db.ts` `takePairCode` | `service.test.ts` › *pairs once; codes are single-use; a paired device cannot be re-bound*, *caps the number of linked devices*; 8-char codes, `/pair` limited to 5 tries / 10 min per user, private chats only (expiry: **gap**) |
+| 9 | Nothing is sent without a business connection; there's an honest refusal instead | Silent failure, or "sent" when nothing was sent | `service.ts` `send` | `service.test.ts` › *refuses to send without a business connection* |
+| 10 | Audio is never persisted; draft transcripts expire after 24 h; confirming deletes the transcript | Data retention / privacy | `service.ts` (no audio write), `db.ts` `purgeExpiredDrafts`, `finalize` | `service.test.ts` › *confirming … drops the transcript* |
+| 11 | Capture size is capped, and captures are rate-limited per device | DoS, and cost blow-up on STT/LLM | `http.ts` | `http-wav-stt.test.ts` › *refuses oversized audio* (rate limit: **gap**) |
+| 12 | No secrets in the glasses bundle | Key theft from a published `.ehpk` | `apps/glasses` only reads `VITE_API_BASE` | `/submission-audit` step 3 (grep of `dist`) |
+| 13 | The record hash covers exactly what was agreed (parties + commitments), not history noise | Tampering going unnoticed | `core/src/canonical.ts` | `dates-hash-format.test.ts` › *hashes only the agreed content* |
+| 14 | No business-chat content is sent to third-party APIs (Telegram ToS 5.4) | ToS violation, privacy | The LLM only sees locked audio transcripts and amendment text typed into our bot chat | Code review (`bot.ts` sends only `business_message` metadata to the contacts table) |
+| 15 | The card goes to exactly the contact the lens showed | Wrong-recipient leak when contact order changes | `service.ts` `send` (draft stores `contactTgId`; lens sends `?contact=`) | `service.test.ts` › *sends to exactly the contact shown on the lens*, *refuses when the lens and server disagree* |
+| 16 | A double tap sends / confirms once | Duplicate cards or checklists | per-agreement serialisation + status saved before side effects | `service.test.ts` › *a double tap sends only once*, *a second confirm is a typed refusal* |
+| 17 | A confirmation never depends on Telegram accepting the checklist | Stuck agreements | `service.ts` `finalize` (persist first, checklist best-effort) | `service.test.ts` › *a confirmation survives a Telegram checklist failure* |
+| 18 | Amendments: new dates/amounts must come from the counterparty's words; can't empty the agreement | Injection via amendment text | `service.ts` `applyAmendment` | `service.test.ts` › *refuses out-of-range indexes, dates and amounts not in the note, empty and no-op amendments* |
+| 19 | Checklist ticks are scoped to the wearer's business connection | Cross-tenant tick | `db.ts` `checklistByMessage(connectionId, …)` | `service.test.ts` › *ticks from another wearer's connection are ignored* |
+| 20 | Unanswered agreements expire after 7 days and keep no content | Retention | `service.ts` `housekeeping` + `scrub` | `service.test.ts` › *housekeeping expires unanswered agreements* |
+| 21 | Quotes must be ≥3 words / 12 chars and match on word boundaries; amounts must have been spoken; no links/handles | Trivial-quote bypass of the gate | `core/src/validate.ts` | `validate.test.ts` › *rejects trivial quotes*, *matches on word boundaries*, *drops commitments whose amount was never said*, *rejects links and handles* |
+| 22 | Device token never in URLs | Token leak via logs | single-use 60 s SSE tickets (`/api/devices/me/sse-ticket`) | code review (`http.ts`, `api.ts`) |

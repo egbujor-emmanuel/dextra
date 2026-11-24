@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+    <title>Dextra</title>
+    <style>
+      :root { --bg: #111311; --ink: #e7efe7; --dim: #8fa38f; --lens: #3cff6b; }
+      html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, sans-serif; touch-action: manipulation; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+      #app { max-width: 520px; margin: 0 auto; padding: 20px 16px; }
+      h1 { font-size: 20px; letter-spacing: 0.08em; margin: 0 0 2px; }
+      .motto { color: var(--dim); font-style: italic; margin: 0 0 18px; }
+      .lens { background: #000; border-radius: 10px; padding: 12px 14px; color: var(--lens); font: 14px/1.4 ui-monospace, monospace; white-space: pre-wrap; min-height: 150px; }
+      .lens .h { opacity: 0.8; } .lens .f { opacity: 0.55; margin-top: 10px; }
+      #help { margin-top: 18px; color: var(--dim); }
+      #help ol { padding-left: 20px; } #help li { margin: 6px 0; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>DEXTRA</h1>
+      <p class="motto">Dictum, factum. Said, done.</p>
+      <div class="lens" aria-live="polite">
+        <div class="h" id="lens-header">DEXTRA</div>
+        <div id="lens-body">Starting…</div>
+        <div class="f" id="lens-footer"></div>
+      </div>
+      <section id="help">
+        <ol>
+          <li>Open Telegram, start the Dextra bot shown on your lens and send the <code>/pair</code> code shown on your glasses.</li>
+          <li>In Telegram: Settings ▸ Chat Automation ▸ add Dextra, so it can send agreements to the people you talk to.</li>
+          <li>Talk. When you agree something, hold the temple. The other person confirms in Telegram.</li>
+        </ol>
+        <p>Audio stays in phone memory (last 45 s) and is only sent when you hold to lock. Nothing is kept unless both of you confirm.</p>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

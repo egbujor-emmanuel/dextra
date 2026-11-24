@@ -1,0 +1,163 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "cases": 12,
+  "tp": 17,
+  "fp": 0,
+  "fn": 0,
+  "precision": 1,
+  "recall": 1,
+  "unsupportedProposed": 0,
+  "unsupportedPassed": 0,
+  "ranAt": "2026-11-24T00:30:29.637Z",
+  "rows": [
+    {
+      "id": "deck-intro",
+      "expected": 2,
+      "kept": [
+        [
+          1,
+          "send deck"
+        ],
+        [
+          0,
+          "intro you to sara"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "freelance-scope",
+      "expected": 3,
+      "kept": [
+        [
+          0,
+          "pay half upfront"
+        ],
+        [
+          1,
+          "deliver three screens"
+        ],
+        [
+          1,
+          "start work"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "landlord-ac",
+      "expected": 2,
+      "kept": [
+        [
+          1,
+          "fix the ac"
+        ],
+        [
+          0,
+          "pay rent"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "no-commitment-smalltalk",
+      "expected": 0,
+      "kept": [],
+      "dropped": 0
+    },
+    {
+      "id": "maybe-not-a-commitment",
+      "expected": 0,
+      "kept": [],
+      "dropped": 0
+    },
+    {
+      "id": "investor-followup",
+      "expected": 3,
+      "kept": [
+        [
+          0,
+          "send updated metrics"
+        ],
+        [
+          1,
+          "come back after ic"
+        ],
+        [
+          1,
+          "loop in partner dana"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "mechanic-quote",
+      "expected": 1,
+      "kept": [
+        [
+          1,
+          "provide brake pads and labour"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "team-standup",
+      "expected": 2,
+      "kept": [
+        [
+          0,
+          "fix the login bug"
+        ],
+        [
+          1,
+          "ship the release"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "refused-request",
+      "expected": 0,
+      "kept": [],
+      "dropped": 0
+    },
+    {
+      "id": "money-split",
+      "expected": 1,
+      "kept": [
+        [
+          0,
+          "send sixty"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "pushback-renegotiated",
+      "expected": 1,
+      "kept": [
+        [
+          1,
+          "deliver"
+        ]
+      ],
+      "dropped": 0
+    },
+    {
+      "id": "conditional",
+      "expected": 2,
+      "kept": [
+        [
+          0,
+          "send contract"
+        ],
+        [
+          1,
+          "sign contract"
+        ]
+      ],
+      "dropped": 0
+    }
+  ]
+}

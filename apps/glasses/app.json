@@ -1,0 +1,20 @@
+{
+  "package_id": "app.dextra.glasses",
+  "edition": "202601",
+  "name": "Dextra",
+  "version": "0.1.0",
+  "min_sdk_version": "0.0.14",
+  "entrypoint": "index.html",
+  "permissions": [
+    {
+      "name": "g2-microphone",
+      "desc": "Holds the last 45 seconds of conversation in phone memory so you can lock an agreement. Audio is never stored."
+    },
+    {
+      "name": "network",
+      "desc": "Sends locked audio to the Dextra server for transcription and sends agreements to Telegram.",
+      "whitelist": ["https://api.dextra.app"]
+    }
+  ],
+  "supported_languages": ["en"]
+}
