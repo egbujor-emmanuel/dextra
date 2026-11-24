@@ -38,11 +38,18 @@ const secrets = {
 }
 const envVars = Object.entries(secrets).map(([key, value]) => ({ key, value }))
 
-const owners = await call('GET', '/v1/owners?limit=20')
+// API keys see every workspace on the account: deploy only into the dedicated one, by exact name, never "the first".
+const WORKSPACE = env.RENDER_WORKSPACE ?? 'Dextra'
+const owners = await call('GET', '/v1/owners?limit=50')
 if (!owners.ok) fail('list workspaces', owners)
-const owner = owners.json[0]?.owner
-if (!owner?.id) fail('find workspace', owners)
-console.info(`workspace: ${owner.name ?? owner.id}`)
+const all = owners.json.map(o => o.owner).filter(Boolean)
+const owner = all.find(o => o.name === WORKSPACE)
+if (!owner) {
+  console.error(`No Render workspace named "${WORKSPACE}". Workspaces on this account: ${all.map(o => `"${o.name}"`).join(', ')}`)
+  console.error('Create it in the dashboard (workspace switcher ▸ New workspace ▸ Hobby), or set RENDER_WORKSPACE in apps/server/.env.')
+  process.exit(1)
+}
+console.info(`workspace: ${owner.name} (${owner.id})`)
 
 const existing = await call('GET', `/v1/services?name=${NAME}&ownerId=${owner.id}&limit=20`)
 if (!existing.ok) fail('list services', existing)
