@@ -1,14 +1,14 @@
 {
   "model": "openai/gpt-oss-120b",
   "cases": 12,
-  "tp": 17,
+  "tp": 16,
   "fp": 0,
-  "fn": 0,
+  "fn": 1,
   "precision": 1,
-  "recall": 1,
+  "recall": 0.9411764705882353,
   "unsupportedProposed": 0,
   "unsupportedPassed": 0,
-  "ranAt": "2026-11-24T00:30:29.637Z",
+  "ranAt": "2026-11-24T15:52:13.345Z",
   "rows": [
     {
       "id": "deck-intro",
@@ -20,7 +20,7 @@
         ],
         [
           0,
-          "intro you to sara"
+          "intro you to Sara"
         ]
       ],
       "dropped": 0
@@ -30,16 +30,12 @@
       "expected": 3,
       "kept": [
         [
-          0,
-          "pay half upfront"
-        ],
-        [
           1,
           "deliver three screens"
         ],
         [
-          1,
-          "start work"
+          0,
+          "pay half upfront"
         ]
       ],
       "dropped": 0
@@ -76,16 +72,16 @@
       "expected": 3,
       "kept": [
         [
+          1,
+          "come back to you"
+        ],
+        [
           0,
-          "send updated metrics"
+          "send the updated metrics"
         ],
         [
           1,
-          "come back after ic"
-        ],
-        [
-          1,
-          "loop in partner dana"
+          "loop in my partner Dana"
         ]
       ],
       "dropped": 0
@@ -96,7 +92,11 @@
       "kept": [
         [
           1,
-          "provide brake pads and labour"
+          "deliver brake pads and labour"
+        ],
+        [
+          0,
+          "pay three hundred"
         ]
       ],
       "dropped": 0
@@ -128,7 +128,7 @@
       "kept": [
         [
           0,
-          "send sixty"
+          "send you sixty"
         ]
       ],
       "dropped": 0
@@ -139,7 +139,7 @@
       "kept": [
         [
           1,
-          "deliver"
+          "deliver by friday"
         ]
       ],
       "dropped": 0
@@ -149,12 +149,12 @@
       "expected": 2,
       "kept": [
         [
-          0,
-          "send contract"
+          1,
+          "sign the contract"
         ],
         [
-          1,
-          "sign contract"
+          0,
+          "send the contract"
         ]
       ],
       "dropped": 0

@@ -2,7 +2,7 @@
 // apps/server/.env. Needs RENDER_API_KEY (Render ▸ Account Settings ▸ API Keys) in that .env, and the Render GitHub app
 // allowed to read the repo. Usage: node scripts/deploy/render-deploy.mjs
 import { randomBytes } from 'node:crypto'
-import { api, readEnv, requireKeys } from './dotenv.mjs'
+import { api, readEnv, requireKeys, writeEnvKeys } from './dotenv.mjs'
 
 const BASE = 'https://api.render.com'
 const NAME = 'dextra'
@@ -11,6 +11,12 @@ const BRANCH = 'master'
 const NODE_VERSION = '24.18.0'
 
 const env = readEnv()
+// The scheduler secret must match on Render and in GitHub Actions, so it is generated once and kept in .env.
+if (!env.CRON_SECRET) {
+  env.CRON_SECRET = randomBytes(32).toString('hex')
+  writeEnvKeys({ CRON_SECRET: env.CRON_SECRET })
+  console.info('generated CRON_SECRET and saved it to apps/server/.env (value not shown)')
+}
 requireKeys(env, ['RENDER_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_BOT_USERNAME', 'DEEPGRAM_API_KEY', 'GROQ_API_KEY', 'DATABASE_URL', 'DATABASE_AUTH_TOKEN'])
 if (env.DATABASE_URL.startsWith('file:')) {
   console.error('DATABASE_URL points at a local file; run scripts/deploy/turso-setup.mjs first (Render wipes local files).')
@@ -34,6 +40,7 @@ const secrets = {
   GROQ_MODEL: env.GROQ_MODEL ?? 'openai/gpt-oss-120b',
   DATABASE_URL: env.DATABASE_URL,
   DATABASE_AUTH_TOKEN: env.DATABASE_AUTH_TOKEN,
+  CRON_SECRET: env.CRON_SECRET,
   NODE_VERSION,
 }
 const envVars = Object.entries(secrets).map(([key, value]) => ({ key, value }))

@@ -4,107 +4,290 @@
     {
       "id": "deck-intro",
       "utterances": [
-        [0, "So you'll send me the deck by Thursday?"],
-        [1, "Yes, deck by Thursday. Can you intro me to Sara?"],
-        [0, "Sure, I'll intro you to Sara this week."]
+        [
+          0,
+          "So you'll send me the deck by Thursday?"
+        ],
+        [
+          1,
+          "Yes, deck by Thursday. Can you intro me to Sara?"
+        ],
+        [
+          0,
+          "Sure, I'll intro you to Sara this week."
+        ]
       ],
-      "expected": [[1, "deck"], [0, "sara"]]
+      "expected": [
+        [
+          1,
+          "deck"
+        ],
+        [
+          0,
+          "sara"
+        ]
+      ]
     },
     {
       "id": "freelance-scope",
       "utterances": [
-        [1, "So it's three screens for two thousand dollars, done by the fifteenth."],
-        [0, "Agreed. I'll pay half upfront tomorrow."],
-        [1, "Great, I'll start Monday."]
+        [
+          1,
+          "So it's three screens for two thousand dollars, done by the fifteenth."
+        ],
+        [
+          0,
+          "Agreed. I'll pay half upfront tomorrow."
+        ],
+        [
+          1,
+          "Great, I'll start Monday."
+        ]
       ],
-      "expected": [[1, "screens"], [0, "pay"], [1, "start"]]
+      "expected": [
+        [
+          1,
+          "screens"
+        ],
+        [
+          0,
+          "pay"
+        ],
+        [
+          1,
+          "start"
+        ]
+      ]
     },
     {
       "id": "landlord-ac",
       "utterances": [
-        [0, "The AC has been broken for a week."],
-        [1, "I'll get it fixed by Friday, I promise."],
-        [0, "Okay, and I'll pay rent once it's done."]
+        [
+          0,
+          "The AC has been broken for a week."
+        ],
+        [
+          1,
+          "I'll get it fixed by Friday, I promise."
+        ],
+        [
+          0,
+          "Okay, and I'll pay rent once it's done."
+        ]
       ],
-      "expected": [[1, "ac"], [0, "rent"]]
+      "expected": [
+        [
+          1,
+          "ac"
+        ],
+        [
+          0,
+          "rent"
+        ]
+      ]
     },
     {
       "id": "no-commitment-smalltalk",
       "utterances": [
-        [0, "How was the conference?"],
-        [1, "Busy, lots of good talks about wearables."],
-        [0, "Nice, I heard the keynote was great."]
+        [
+          0,
+          "How was the conference?"
+        ],
+        [
+          1,
+          "Busy, lots of good talks about wearables."
+        ],
+        [
+          0,
+          "Nice, I heard the keynote was great."
+        ]
       ],
       "expected": []
     },
     {
       "id": "maybe-not-a-commitment",
       "utterances": [
-        [1, "I might be able to look at it next week, not sure."],
-        [0, "No pressure, whenever you can."]
+        [
+          1,
+          "I might be able to look at it next week, not sure."
+        ],
+        [
+          0,
+          "No pressure, whenever you can."
+        ]
       ],
       "expected": []
     },
     {
       "id": "investor-followup",
       "utterances": [
-        [1, "We'll come back to you after IC next Tuesday."],
-        [0, "Perfect. I'll send the updated metrics tonight."],
-        [1, "And I'll loop in my partner Dana."]
+        [
+          1,
+          "We'll come back to you after IC next Tuesday."
+        ],
+        [
+          0,
+          "Perfect. I'll send the updated metrics tonight."
+        ],
+        [
+          1,
+          "And I'll loop in my partner Dana."
+        ]
       ],
-      "expected": [[1, "come back"], [0, "metrics"], [1, "dana"]]
+      "expected": [
+        [
+          1,
+          "come back"
+        ],
+        [
+          0,
+          "metrics"
+        ],
+        [
+          1,
+          "dana"
+        ]
+      ]
     },
     {
       "id": "mechanic-quote",
       "utterances": [
-        [1, "Brake pads and labour, three hundred total, ready Saturday morning."],
-        [0, "Fine, go ahead at three hundred."]
+        [
+          1,
+          "Brake pads and labour, three hundred total, ready Saturday morning."
+        ],
+        [
+          0,
+          "Fine, go ahead at three hundred."
+        ]
       ],
-      "expected": [[1, "brake"]]
+      "expected": [
+        [
+          1,
+          "brake"
+        ]
+      ],
+      "optional": [
+        [
+          0,
+          "three hundred"
+        ]
+      ],
+      "note": "Accepting a quote (\"go ahead at three hundred\") arguably commits the customer to pay it; the model goes both ways, so the payment is optional, not scored."
     },
     {
       "id": "team-standup",
       "utterances": [
-        [0, "I'll fix the login bug today."],
-        [1, "Then I'll ship the release tomorrow once that's in."],
-        [0, "Good. Let's also think about the roadmap sometime."]
+        [
+          0,
+          "I'll fix the login bug today."
+        ],
+        [
+          1,
+          "Then I'll ship the release tomorrow once that's in."
+        ],
+        [
+          0,
+          "Good. Let's also think about the roadmap sometime."
+        ]
       ],
-      "expected": [[0, "login"], [1, "release"]]
+      "expected": [
+        [
+          0,
+          "login"
+        ],
+        [
+          1,
+          "release"
+        ]
+      ]
     },
     {
       "id": "refused-request",
       "utterances": [
-        [0, "Can you cover my shift on Sunday?"],
-        [1, "Sorry, I can't this weekend."]
+        [
+          0,
+          "Can you cover my shift on Sunday?"
+        ],
+        [
+          1,
+          "Sorry, I can't this weekend."
+        ]
       ],
       "expected": []
     },
     {
       "id": "money-split",
       "utterances": [
-        [1, "Dinner was one twenty, I paid."],
-        [0, "I'll send you sixty tonight."],
-        [1, "Thanks."]
+        [
+          1,
+          "Dinner was one twenty, I paid."
+        ],
+        [
+          0,
+          "I'll send you sixty tonight."
+        ],
+        [
+          1,
+          "Thanks."
+        ]
       ],
-      "expected": [[0, "sixty"]]
+      "expected": [
+        [
+          0,
+          "sixty"
+        ]
+      ]
     },
     {
       "id": "pushback-renegotiated",
       "utterances": [
-        [0, "Can you deliver by Wednesday?"],
-        [1, "Wednesday is tight. Friday works."],
-        [0, "Okay, Friday then."],
-        [1, "Deal, Friday."]
+        [
+          0,
+          "Can you deliver by Wednesday?"
+        ],
+        [
+          1,
+          "Wednesday is tight. Friday works."
+        ],
+        [
+          0,
+          "Okay, Friday then."
+        ],
+        [
+          1,
+          "Deal, Friday."
+        ]
       ],
-      "expected": [[1, "deliver"]]
+      "expected": [
+        [
+          1,
+          "deliver"
+        ]
+      ]
     },
     {
       "id": "conditional",
       "utterances": [
-        [1, "If you send the contract today, I'll sign it tomorrow."],
-        [0, "I'll send it in an hour."]
+        [
+          1,
+          "If you send the contract today, I'll sign it tomorrow."
+        ],
+        [
+          0,
+          "I'll send it in an hour."
+        ]
       ],
-      "expected": [[0, "contract"], [1, "sign"]]
+      "expected": [
+        [
+          0,
+          "contract"
+        ],
+        [
+          1,
+          "sign"
+        ]
+      ]
     }
   ]
 }

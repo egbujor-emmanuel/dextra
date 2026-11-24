@@ -13,7 +13,7 @@
     {
       "name": "network",
       "desc": "Sends locked audio to the Dextra server for transcription and sends agreements to Telegram.",
-      "whitelist": ["https://api.dextra.app"]
+      "whitelist": ["https://dextra-qfz7.onrender.com"]
     }
   ],
   "supported_languages": ["en"]

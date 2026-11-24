@@ -16,6 +16,8 @@ const envSchema = z.object({
   /** Turso in production (libsql://…); data then survives restarts on hosts with an ephemeral disk. */
   DATABASE_URL: z.string().regex(/^(libsql|https|file):/, 'DATABASE_URL must start with libsql:, https: or file:').optional(),
   DATABASE_AUTH_TOKEN: z.string().optional(),
+  /** Lets a scheduler (GitHub Actions) run housekeeping, because a sleeping free-plan server runs no timers. */
+  CRON_SECRET: z.string().min(32, 'CRON_SECRET must be at least 32 characters').optional(),
 })
 
 export type Env = z.infer<typeof envSchema>

@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { Hono, type Context } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
@@ -37,7 +38,13 @@ function bearer(c: Context): string | undefined {
   return h?.startsWith('Bearer ') ? h.slice(7) : undefined
 }
 
-export function createApp(service: AgreementService, hub: Hub): Hono {
+/** Constant-time comparison of two secrets (hashing first makes the lengths equal). */
+function sameSecret(given: string, expected: string): boolean {
+  const digest = (s: string) => createHash('sha256').update(s).digest()
+  return timingSafeEqual(digest(given), digest(expected))
+}
+
+export function createApp(service: AgreementService, hub: Hub, opts: { cronSecret?: string } = {}): Hono {
   const app = new Hono()
   const deviceLimit = createLimiter(CAPTURES_PER_MINUTE_DEVICE, 60_000)
   const wearerLimit = createLimiter(CAPTURES_PER_MINUTE_WEARER, 60_000)
@@ -57,6 +64,13 @@ export function createApp(service: AgreementService, hub: Hub): Hono {
   })
 
   app.get('/health', c => c.json({ ok: true }))
+
+  /** Reminders and expiry on a schedule: the free plan sleeps when idle, so its own timers can't be relied on. */
+  app.post('/internal/housekeeping', async c => {
+    const given = c.req.header('x-cron-secret') ?? ''
+    if (!opts.cronSecret || !sameSecret(given, opts.cronSecret)) throw new ServiceError('UNAUTHORIZED', 'Not allowed.', 401)
+    return c.json(await service.housekeeping())
+  })
 
   app.post('/api/devices', async c => {
     const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'local'

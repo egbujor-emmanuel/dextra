@@ -53,6 +53,18 @@ describe('http', async () => {
   })
   const app = createApp(service, new Hub())
 
+  it('runs housekeeping only for the scheduler holding the secret', async () => {
+    const secret = 'x'.repeat(40)
+    const cronApp = createApp(service, new Hub(), { cronSecret: secret })
+    const call = (header?: string) => cronApp.request('/internal/housekeeping', { method: 'POST', headers: header ? { 'x-cron-secret': header } : {} })
+    expect((await call()).status).toBe(401)
+    expect((await call('y'.repeat(40))).status).toBe(401)
+    const ok = await call(secret)
+    expect(ok.status).toBe(200)
+    expect(await ok.json()).toEqual({ expired: 0, reminded: 0 })
+    expect((await app.request('/internal/housekeeping', { method: 'POST', headers: { 'x-cron-secret': secret } })).status).toBe(401) // no secret configured
+  })
+
   it('answers CORS preflight for the WebView', async () => {
     const res = await app.request('/api/captures', { method: 'OPTIONS', headers: { Origin: 'https://example.app', 'Access-Control-Request-Method': 'POST' } })
     expect(res.status).toBe(204)

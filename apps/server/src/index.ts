@@ -3,7 +3,7 @@ import { GrammyError, webhookCallback, type Bot } from 'grammy'
 import { ALLOWED_UPDATES, createBot, registerHandlers, TelegramMessenger } from './bot'
 import { Db } from './db'
 import { loadEnv } from './env'
-import { notConfigured } from './errors'
+import { describeError, notConfigured } from './errors'
 import { ClaudeExtractor, GroqExtractor } from './extract'
 import { createApp } from './http'
 import { Hub } from './hub'
@@ -11,6 +11,7 @@ import { AgreementService, type Messenger } from './service'
 import { DeepgramTranscriber } from './stt'
 
 const PURGE_EVERY_MS = 15 * 60_000
+const STARTUP_HOUSEKEEPING_MS = 10_000
 
 /** Used when no bot token is set: every Telegram action fails with a typed, honest error. */
 const offlineMessenger: Messenger = {
@@ -57,7 +58,7 @@ async function main(): Promise<void> {
     botUsername,
     log: m => console.warn(m),
   })
-  const app = createApp(service, hub)
+  const app = createApp(service, hub, { cronSecret: env.CRON_SECRET })
 
   if (bot) {
     registerHandlers(bot, service, db, messenger)
@@ -71,9 +72,15 @@ async function main(): Promise<void> {
     }
   }
 
-  setInterval(() => {
-    service.housekeeping().catch(e => console.error('[dextra] housekeeping failed', e instanceof Error ? e.name : 'error'))
-  }, PURGE_EVERY_MS)
+  const housekeeping = () => {
+    service.housekeeping().then(
+      r => { if (r.reminded || r.expired) console.info(`[dextra] housekeeping: ${r.reminded} reminders, ${r.expired} expired`) },
+      e => console.error(`[dextra] housekeeping failed: ${describeError(e)}`),
+    )
+  }
+  // Whatever wakes a sleeping free-plan server (a Telegram update, the glasses, the hourly scheduler) also catches up.
+  setTimeout(housekeeping, STARTUP_HOUSEKEEPING_MS)
+  setInterval(housekeeping, PURGE_EVERY_MS)
   serve({ fetch: app.fetch, port: env.PORT })
   const features = [`telegram:${bot ? `${env.TELEGRAM_ENV} @${botUsername}` : 'off'}`, `stt:${env.DEEPGRAM_API_KEY ? 'on' : 'off'}`, `llm:${env.GROQ_API_KEY ? 'groq' : env.ANTHROPIC_API_KEY ? 'claude' : 'off'}`, `db:${env.DATABASE_URL?.startsWith('file:') || !env.DATABASE_URL ? 'local' : 'turso'}`]
   console.info(`[dextra] server on :${env.PORT} (${features.join(' ')})`)

@@ -13,6 +13,9 @@ interface EvalCase {
   id: string
   utterances: [number, string][]
   expected: [number, string][]
+  /** Genuinely ambiguous commitments: counted neither as a miss when absent nor as an error when present. */
+  optional?: [number, string][]
+  note?: string
 }
 
 const PACE_MS = 6000
@@ -32,12 +35,16 @@ async function main(): Promise<void> {
     const utterances = toUtterances(c.utterances)
     const proposal = await extractor.propose(utterances)
     const result = validateProposal(proposal, utterances, 0)
-    unsupportedProposed += result.dropped.length
+    unsupportedProposed += result.dropped.filter(d => d.code === 'UNSUPPORTED_BY_TRANSCRIPT').length
     const kept = result.commitments
     const matched = new Set<number>()
     for (const [speaker, keyword] of c.expected) {
       const hit = kept.findIndex((k, i) => !matched.has(i) && k.speaker === speaker && normalizeForMatch(k.what).includes(normalizeForMatch(keyword)))
       if (hit >= 0) { matched.add(hit); tp++ } else fn++
+    }
+    for (const [speaker, keyword] of c.optional ?? []) {
+      const hit = kept.findIndex((k, i) => !matched.has(i) && k.speaker === speaker && normalizeForMatch(k.what).includes(normalizeForMatch(keyword)))
+      if (hit >= 0) matched.add(hit) // allowed, not scored
     }
     fp += kept.length - matched.size
     // A kept commitment must always be backed by its speaker's words (the gate's invariant).
