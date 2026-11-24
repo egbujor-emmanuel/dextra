@@ -15,6 +15,13 @@ function displayName(u: { first_name: string; last_name?: string }): string {
   return safeName([u.first_name, u.last_name].filter(Boolean).join(' '))
 }
 
+/** The counterparty's confirmation reply, matching how the record was really shared. */
+export function confirmReply(sharedAs: Agreement['sharedAs']): string {
+  if (sharedAs === 'checklist') return 'Confirmed ✓ A shared checklist is now in your chat. Dictum, factum.'
+  if (sharedAs === 'message') return "Confirmed ✓ The record is in your chat, and I've sent you buttons to tick items off when they're done. Dictum, factum."
+  return 'Confirmed ✓ Both of you now have the same record. Dictum, factum.'
+}
+
 function bullet(a: Agreement, wearerName: string): string {
   return a.commitments
     .map(c => {
@@ -152,7 +159,9 @@ export function registerHandlers(bot: Bot, service: AgreementService, db: Db, me
         const a = await service.confirm(id, ctx.from.id)
         await ctx.answerCallbackQuery({ text: 'Confirmed ✓' })
         await ctx.editMessageReplyMarkup().catch(() => undefined)
-        await ctx.reply('Confirmed ✓ A shared checklist is now in your chat. Dictum, factum.')
+        // Say only what actually happened: checklists need Premium on the wearer's account (see service.finalize).
+        const sharedAs = (await db.agreement(id))?.agreement.sharedAs
+        await ctx.reply(confirmReply(sharedAs))
         await messenger.notify(a.wearerTgId, `${a.counterpartyName} confirmed ✓`).catch(() => undefined)
       } else if (kind === 'ch' && id) {
         await service.forCounterparty(id, ctx.from.id)

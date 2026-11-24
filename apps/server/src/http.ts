@@ -55,6 +55,8 @@ export function createApp(service: AgreementService, hub: Hub, opts: { cronSecre
 
   // The Even WebView origin is not fixed, so CORS is open; no cookies are used and every data route needs a bearer token.
   app.use('/api/*', cors({ origin: '*', allowHeaders: ['Authorization', 'Content-Type'], allowMethods: ['GET', 'POST', 'OPTIONS'], maxAge: 86400 }))
+  // The landing page shows a live status light; /health returns only {ok:true}.
+  app.use('/health', cors({ origin: '*', allowMethods: ['GET'] }))
 
   app.onError((err, c) => {
     if (err instanceof ServiceError) return c.json({ refusal: err.code, message: err.message }, err.status as HttpStatus)
