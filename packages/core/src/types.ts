@@ -7,6 +7,7 @@ export type AgreementStatus = 'draft' | 'sent' | 'amended' | 'confirmed' | 'fulf
 export type RefusalCode =
   | 'NO_COMMITMENT'
   | 'UNSUPPORTED_BY_TRANSCRIPT'
+  | 'DUPLICATE'
   | 'MALFORMED_PROPOSAL'
   | 'SINGLE_SPEAKER'
   | 'NOT_PAIRED'

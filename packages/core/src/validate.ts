@@ -103,6 +103,31 @@ function supported(c: Proposal['commitments'][number], utterances: Utterance[]):
  * a commitment survives only if its quote appears verbatim (after normalisation)
  * in what the attributed speaker actually said.
  */
+/** Common actions: sharing one ("send") doesn't make two commitments the same; sharing the thing ("deck") does. */
+const ACTIONS = new Set(['send', 'sell', 'pay', 'call', 'get', 'make', 'give', 'share', 'bring', 'take', 'introduce', 'intro', 'email', 'meet', 'book', 'buy', 'finish', 'review', 'check', 'sign', 'fix', 'deliver', 'return', 'transfer', 'confirm', 'text', 'message', 'set', 'put'])
+
+/** Words naming the thing promised ("deck", "sarah"), not glue ("to", "the") or the action. */
+function contentWords(text: string): Set<string> {
+  return new Set(normalizeForMatch(text).split(' ').filter(w => w.length >= 3 && !FILLER.has(w) && !ACTIONS.has(w)))
+}
+
+const digits = (s?: string): string => (s ?? '').replace(/\D/g, '')
+
+/**
+ * People repeat themselves ("deck by Friday?" "yes, deck by Friday"), and speech-to-text may hear a repeat slightly
+ * differently ("send deck" / "sell deck"). Same person and same wording, or same person + same deadline or amount +
+ * a shared content word, is one commitment.
+ */
+export function isRepeat(a: Pick<ValidatedCommitment, 'speaker' | 'what' | 'dueText' | 'amount'>, b: Pick<ValidatedCommitment, 'speaker' | 'what' | 'dueText' | 'amount'>): boolean {
+  if (a.speaker !== b.speaker) return false
+  if (normalizeForMatch(a.what) === normalizeForMatch(b.what)) return true
+  const sameDue = Boolean(a.dueText && b.dueText && normalizeForMatch(a.dueText) === normalizeForMatch(b.dueText))
+  const sameAmount = Boolean(digits(a.amount) && digits(a.amount) === digits(b.amount))
+  if (!sameDue && !sameAmount) return false
+  const words = contentWords(b.what)
+  return [...contentWords(a.what)].some(w => words.has(w))
+}
+
 export function validateProposal(raw: unknown, utterances: Utterance[], wearerSpeaker: number): ValidationResult {
   const parsed = proposalSchema.safeParse(raw)
   if (!parsed.success) return { commitments: [], dropped: [], refusal: 'MALFORMED_PROPOSAL' }
@@ -115,7 +140,12 @@ export function validateProposal(raw: unknown, utterances: Utterance[], wearerSp
       continue
     }
     const by: Party = c.speaker === wearerSpeaker ? 'wearer' : 'counterparty'
-    kept.push({ speaker: c.speaker, by, what: c.what, quote: c.quote, dueText: c.due_text, amount: c.amount })
+    const candidate = { speaker: c.speaker, by, what: c.what, quote: c.quote, dueText: c.due_text, amount: c.amount }
+    if (kept.some(k => isRepeat(k, candidate))) {
+      dropped.push({ what: c.what, code: 'DUPLICATE' })
+      continue
+    }
+    kept.push(candidate)
   }
 
   return {

@@ -117,3 +117,21 @@ describe('validateProposal', () => {
     expect(result.dropped[0]?.code).toBe('UNSUPPORTED_BY_TRANSCRIPT')
   })
 })
+
+import { isRepeat } from '../src/validate'
+
+describe('repeated commitments are merged, distinct ones are kept', () => {
+  const c = (speaker: number, what: string, dueText?: string, amount?: string) => ({ speaker, what, dueText, amount })
+
+  it('merges a repeat, including a mis-heard one with the same deadline', () => {
+    expect(isRepeat(c(0, 'introduce you to Sarah'), c(0, 'Introduce you to Sarah.'))).toBe(true)
+    expect(isRepeat(c(0, 'send deck', 'Friday'), c(0, 'sell deck', 'Friday'))).toBe(true)
+    expect(isRepeat(c(1, 'pay rent', undefined, '$500'), c(1, 'pay the rent money', undefined, '500 dollars'))).toBe(true)
+  })
+
+  it('keeps different things, different people, and same thing on different days', () => {
+    expect(isRepeat(c(0, 'send the deck', 'Friday'), c(0, 'send the invoice', 'Friday'))).toBe(false)
+    expect(isRepeat(c(0, 'send deck', 'Friday'), c(1, 'send deck', 'Friday'))).toBe(false)
+    expect(isRepeat(c(0, 'send deck', 'Friday'), c(0, 'send updated deck', 'Monday'))).toBe(false)
+  })
+})
