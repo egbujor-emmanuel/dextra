@@ -39,6 +39,16 @@
 - `--aid <device>` feeds the laptop mic into `audioEvent`: 100 ms frames, 3,200 B, 16 kHz s16le.
 - `speakerRole` is always `"unknown"` and `direction` always `null` there.
 - Automation API (`--automation-port`): `/api/screenshot/glasses` (RGBA; lit = alpha>0), `/api/console`, `POST /api/input {action}`.
+- Input actions: `up | down | click | double_click | long_press | long_press_release | context_menu`. A **click on the home screen also locks**, so check the lens before sending input (verified 2026-11-24).
+
+**Telegram (verified live 2026-11-24)**
+
+- `sendChecklist` via a business connection fails with `400 PREMIUM_ACCOUNT_REQUIRED` unless the **wearer's account has Telegram Premium**. Dextra then posts the record as a plain business message and sends each person "tap when done" buttons in their private bot chat (`sharedAs: 'message'`).
+- The Bot API rate-limits by shared outgoing IP: MTN carrier NAT, a Netherlands VPN exit and Render's free plan all returned standing `429 retry after 32` for every real token. Fake tokens still get a fast 401, so a 401 proves nothing. Render worked on the next deploy.
+
+**Hosting (2026-11-24)**
+
+- Live server: https://dextra-qfz7.onrender.com (Render free plan, dedicated "Dextra" workspace, Frankfurt). Data: Turso `dextra` (aws-eu-central-1). Pushing to `master` auto-deploys.
 
 **Lifecycle and display**
 

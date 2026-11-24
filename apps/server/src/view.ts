@@ -17,5 +17,6 @@ export function toView(a: Agreement, extra: { warnings?: string[]; contact?: Con
     warnings: extra.warnings ?? [],
     contact: extra.contact,
     hash: a.hash,
+    sharedAs: a.sharedAs,
   }
 }

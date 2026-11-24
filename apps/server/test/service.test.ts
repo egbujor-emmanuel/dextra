@@ -47,6 +47,7 @@ class RecordingMessenger implements Messenger {
   cards: { chatId: number; businessConnectionId: string; reviewUrl: string }[] = []
   checklists: { businessConnectionId: string; chatId: number; title: string; tasks: string[] }[] = []
   texts: { businessConnectionId: string; chatId: number; text: string }[] = []
+  trackers: number[] = []
   failChecklist = false
   failCard = false
   async sendAgreementCard(p: { businessConnectionId: string; chatId: number; reviewUrl: string }) {
@@ -61,6 +62,9 @@ class RecordingMessenger implements Messenger {
   }
   async postText(p: { businessConnectionId: string; chatId: number; text: string }) {
     this.texts.push(p)
+  }
+  async sendTracker(p: { chatId: number }) {
+    this.trackers.push(p.chatId)
   }
   async notify() {}
 }
@@ -237,6 +241,28 @@ describe('send → confirm / amend → checklist', () => {
     expect(messenger.texts[0]).toMatchObject({ businessConnectionId: 'bc_1', chatId: OMAR_CHAT })
     expect(messenger.texts[0]!.text).toContain('Omar Haddad: send the deck · Friday')
     expect(messenger.texts[0]!.text).toContain(`Record ${saved.hash!.slice(0, 12)}`)
+    expect(saved.sharedAs).toBe('message')
+    expect(messenger.trackers.sort()).toEqual([WEARER, OMAR].sort()) // both tick in their own bot chat
+  })
+
+  it('a shared checklist needs no bot-chat trackers', async () => {
+    const id = await sentAgreement()
+    await service.confirm(id, OMAR)
+    expect((await db.agreement(id))!.agreement.sharedAs).toBe('checklist')
+    expect(messenger.trackers).toEqual([])
+  })
+
+  it('either party ticks items in their bot chat; all done fulfils; outsiders are refused', async () => {
+    const id = await sentAgreement()
+    messenger.failChecklist = true
+    await service.confirm(id, OMAR)
+    await expect(service.markDone(id, 999, 0)).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    await expect(service.markDone(id, OMAR, 7)).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    expect((await service.markDone(id, OMAR, 0)).byWearer).toBe(false)
+    const last = await service.markDone(id, WEARER, 1)
+    expect(last.byWearer).toBe(true)
+    expect(last.agreement.status).toBe('fulfilled')
+    expect((await service.markDone(id, WEARER, 1)).agreement.status).toBe('confirmed') // un-tick reopens
   })
 
   it('a second confirm is a typed refusal, not a crash, and posts no second checklist', async () => {

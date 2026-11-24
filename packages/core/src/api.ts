@@ -24,6 +24,7 @@ export const agreementViewSchema = z.object({
   warnings: z.array(z.string()),
   contact: contactSchema.optional(),
   hash: z.string().optional(),
+  sharedAs: z.enum(['checklist', 'message', 'none']).optional(),
 })
 
 export const refusalSchema = z.object({

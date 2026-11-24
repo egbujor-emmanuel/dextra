@@ -40,6 +40,8 @@ export interface Messenger {
   postChecklist(p: { businessConnectionId: string; chatId: number; title: string; tasks: string[] }): Promise<{ messageId: number }>
   /** Plain message in the wearer's chat with the counterparty (fallback when a checklist is refused). */
   postText(p: { businessConnectionId: string; chatId: number; text: string }): Promise<void>
+  /** "Tap when done" buttons in one person's private chat with the bot (used when no checklist could be shared). */
+  sendTracker(p: { chatId: number; agreement: Agreement; wearerName: string }): Promise<void>
   notify(chatId: number, text: string): Promise<void>
 }
 
@@ -318,10 +320,11 @@ export class AgreementService {
   /** Confirmed: state + hash are saved first; the shared checklist is best-effort and never blocks the confirmation. */
   private async finalize(deviceId: string, a: Agreement): Promise<AgreementView> {
     const withHash = { ...a, hash: agreementHash(a) }
-    const view = await this.persist(deviceId, withHash)
+    await this.persist(deviceId, withHash)
     await this.d.db.deleteDraft(a.id)
     const wearer = await this.d.db.wearer(a.wearerTgId)
     const contact = a.counterpartyTgId ? await this.d.db.contact(a.wearerTgId, a.counterpartyTgId) : undefined
+    let sharedAs: NonNullable<Agreement['sharedAs']> = 'none'
     if (wearer?.business_connection_id && contact && withHash.commitments.length > 0) {
       const target = { businessConnectionId: wearer.business_connection_id, chatId: contact.chat_id }
       const title = `Agreed · ${wearer.name} & ${a.counterpartyName}`
@@ -329,15 +332,44 @@ export class AgreementService {
       try {
         const { messageId } = await this.d.messenger.postChecklist({ ...target, title, tasks })
         await this.d.db.saveChecklist({ agreement_id: a.id, business_connection_id: target.businessConnectionId, chat_id: target.chatId, message_id: messageId })
+        sharedAs = 'checklist'
       } catch (e) {
         // Telegram's own reason (e.g. "400: Bad Request: …"); grammY error messages never include the token.
         this.d.log?.(`[dextra] checklist refused: ${errorText(e)}; posting the record as a message instead`)
         // Both people still get the shared record in their chat, with its fingerprint.
         const text = [`✓ ${title}`, '', ...tasks.map(t => `• ${t}`), '', `Record ${withHash.hash.slice(0, 12)} · Dextra`].join('\n')
-        await this.d.messenger.postText({ ...target, text }).catch(err => this.d.log?.(`[dextra] confirmation message refused too: ${errorText(err)}; agreement stays confirmed`))
+        sharedAs = await this.d.messenger.postText({ ...target, text }).then(
+          () => 'message' as const,
+          err => {
+            this.d.log?.(`[dextra] confirmation message refused too: ${errorText(err)}; agreement stays confirmed`)
+            return 'none' as const
+          },
+        )
+      }
+    }
+    const shared = { ...withHash, sharedAs }
+    const view = await this.persist(deviceId, shared)
+    // Without a shared checklist, each person ticks commitments off in their own chat with the bot.
+    if (sharedAs !== 'checklist' && wearer && shared.commitments.length > 0) {
+      for (const chatId of [a.wearerTgId, a.counterpartyTgId].filter((x): x is number => x !== undefined)) {
+        await this.d.messenger.sendTracker({ chatId, agreement: shared, wearerName: wearer.name }).catch(e => this.d.log?.(`[dextra] tracker not sent: ${errorText(e)}`))
       }
     }
     return view
+  }
+
+  /** Either party ticks (or un-ticks) one commitment from their bot chat. Everyone else is refused. */
+  markDone(id: string, tgId: number, index: number): Promise<{ agreement: Agreement; commitment: Commitment; byWearer: boolean }> {
+    return this.serial(id, async () => {
+      const row = await this.d.db.agreement(id)
+      const a = row?.agreement
+      if (!row || !a || (a.wearerTgId !== tgId && a.counterpartyTgId !== tgId)) throw new ServiceError('NOT_FOUND', 'This agreement was not found.', 404)
+      const c = a.commitments[index]
+      if (!c) throw new ServiceError('NOT_FOUND', 'That item is not part of this agreement.', 404)
+      const next = transition(a, { type: 'tick', at: this.nowISO(), commitmentId: c.id, done: !c.done })
+      await this.persist(row.deviceId, next)
+      return { agreement: next, commitment: next.commitments[index]!, byWearer: a.wearerTgId === tgId }
+    })
   }
 
   /** Checklist ticks from Telegram (task ids are 1-based commitment positions), scoped to the wearer's connection. */

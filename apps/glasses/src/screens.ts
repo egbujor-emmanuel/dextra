@@ -86,7 +86,7 @@ export function frameFor(s: Screen): TextFrame {
       return {
         header: `${s.agreement.counterpartyName} confirmed ✓`,
         body: lines(...commitmentLines(s.agreement), '', 'Dictum, factum.'),
-        footer: 'Checklist shared in Telegram',
+        footer: sharedFooter(s.agreement.sharedAs),
       }
     case 'refusal':
       return { header: 'Not locked', body: lines(s.message), footer: lines(`${s.code} · tap ▸ back`) }
@@ -102,4 +102,12 @@ export function frameFor(s: Screen): TextFrame {
 export function recordLabel(a: AgreementView): string {
   const first = a.commitments[0]?.what ?? '—'
   return fitLine(`${STATUS_MARK[a.status]} ${a.counterpartyName}: ${first}`, 60)
+}
+
+/** Says only what actually happened in Telegram (never claims a checklist that was refused). */
+export function sharedFooter(sharedAs: AgreementView['sharedAs']): string {
+  if (sharedAs === 'checklist') return 'Checklist shared in Telegram'
+  if (sharedAs === 'message') return 'Record shared in Telegram · tick in your bot chat'
+  if (sharedAs === 'none') return 'Confirmed · not posted to the chat'
+  return 'Confirmed by both'
 }

@@ -46,6 +46,8 @@ export interface Agreement {
   history: HistoryEntry[]
   hash?: string
   stampTx?: string
+  /** How the confirmed record reached the shared chat: a Telegram checklist (needs Premium), a plain message, or not at all. */
+  sharedAs?: 'checklist' | 'message' | 'none'
 }
 
 /** One diarized stretch of speech. `rms` is mean loudness (0..1) when we computed it. */

@@ -17,6 +17,7 @@ const offlineMessenger: Messenger = {
   sendAgreementCard: () => Promise.reject(notConfigured('TELEGRAM', 'TELEGRAM_BOT_TOKEN')),
   postChecklist: () => Promise.reject(notConfigured('TELEGRAM', 'TELEGRAM_BOT_TOKEN')),
   postText: () => Promise.reject(notConfigured('TELEGRAM', 'TELEGRAM_BOT_TOKEN')),
+  sendTracker: () => Promise.reject(notConfigured('TELEGRAM', 'TELEGRAM_BOT_TOKEN')),
   notify: () => Promise.resolve(),
 }
 

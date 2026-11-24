@@ -51,9 +51,24 @@ export class TelegramMessenger implements Messenger {
     await this.bot.api.sendMessage(p.chatId, p.text.slice(0, 4000), { business_connection_id: p.businessConnectionId, link_preview_options: { is_disabled: true } })
   }
 
+  async sendTracker(p: { chatId: number; agreement: Agreement; wearerName: string }): Promise<void> {
+    const text = `Agreed ✓ ${p.wearerName} & ${p.agreement.counterpartyName}\n\nTap each item when it's done. Both of you see the same record.`
+    await this.bot.api.sendMessage(p.chatId, text, { reply_markup: trackerKeyboard(p.agreement, p.wearerName) })
+  }
+
   async notify(chatId: number, text: string): Promise<void> {
     await this.bot.api.sendMessage(chatId, text)
   }
+}
+
+/** One button per commitment; ☑ when done. Callback data stays far under Telegram's 64-byte limit. */
+export function trackerKeyboard(a: Agreement, wearerName: string): InlineKeyboard {
+  const kb = new InlineKeyboard()
+  a.commitments.forEach((c, i) => {
+    const who = c.by === 'wearer' ? wearerName : a.counterpartyName
+    kb.text(`${c.done ? '☑' : '☐'} ${who}: ${c.what}`.slice(0, 60), `dn:${a.id}:${i}`).row()
+  })
+  return kb
 }
 
 async function replyError(ctx: Context, e: unknown): Promise<void> {
@@ -118,8 +133,20 @@ export function registerHandlers(bot: Bot, service: AgreementService, db: Db, me
   })
 
   bot.on('callback_query:data', async ctx => {
-    const [kind, id] = ctx.callbackQuery.data.split(':')
+    const [kind, id, item] = ctx.callbackQuery.data.split(':')
     try {
+      if (kind === 'dn' && id && item !== undefined) {
+        const { agreement, commitment, byWearer } = await service.markDone(id, ctx.from.id, Number(item))
+        const wearer = await db.wearer(agreement.wearerTgId)
+        const wearerName = wearer?.name ?? 'Them'
+        await ctx.editMessageReplyMarkup({ reply_markup: trackerKeyboard(agreement, wearerName) }).catch(() => undefined)
+        await ctx.answerCallbackQuery({ text: commitment.done ? 'Marked done ✓' : 'Reopened' })
+        const other = byWearer ? agreement.counterpartyTgId : agreement.wearerTgId
+        const actor = byWearer ? wearerName : agreement.counterpartyName
+        const allDone = agreement.status === 'fulfilled' ? '\n\nEverything agreed is done ✓' : ''
+        if (other) await messenger.notify(other, `${actor} ${commitment.done ? 'marked done' : 'reopened'}: ${commitment.what}${allDone}`).catch(() => undefined)
+        return
+      }
       if (kind === 'ok' && id) {
         const a = await service.confirm(id, ctx.from.id)
         await ctx.answerCallbackQuery({ text: 'Confirmed ✓' })

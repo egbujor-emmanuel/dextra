@@ -48,7 +48,7 @@ describe('http', async () => {
     hub: new Hub(),
     transcriber: { transcribe: async () => [] },
     extractor: { propose: async () => ({ commitments: [] }), amend: async () => ({ changes: [] }) },
-    messenger: { sendAgreementCard: async () => undefined, postChecklist: async () => ({ messageId: 1 }), postText: async () => undefined, notify: async () => undefined },
+    messenger: { sendAgreementCard: async () => undefined, postChecklist: async () => ({ messageId: 1 }), postText: async () => undefined, sendTracker: async () => undefined, notify: async () => undefined },
     botUsername: 'DextraBot',
   })
   const app = createApp(service, new Hub())
