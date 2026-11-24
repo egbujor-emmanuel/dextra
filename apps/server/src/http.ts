@@ -3,7 +3,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { streamSSE } from 'hono/streaming'
 import { InvalidTransitionError, type ServerEvent } from '@dextra/core'
-import { ServiceError } from './errors'
+import { describeError, ServiceError } from './errors'
 import type { Hub } from './hub'
 import { newToken } from './ids'
 import type { AgreementService } from './service'
@@ -52,7 +52,7 @@ export function createApp(service: AgreementService, hub: Hub): Hono {
   app.onError((err, c) => {
     if (err instanceof ServiceError) return c.json({ refusal: err.code, message: err.message }, err.status as HttpStatus)
     if (err instanceof InvalidTransitionError) return c.json({ refusal: err.code, message: 'That action no longer applies. The card was already updated.' }, 409)
-    console.error('[dextra] unhandled', err instanceof Error ? err.name : 'unknown')
+    console.error(`[dextra] unhandled ${c.req.method} ${c.req.routePath}: ${describeError(err)}`)
     return c.json({ refusal: 'SERVER_ERROR', message: 'Something went wrong on the server.' }, 500)
   })
 

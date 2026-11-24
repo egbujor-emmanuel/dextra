@@ -37,7 +37,9 @@ export class Db {
 
   static async open(url: string, authToken?: string): Promise<Db> {
     if (url.startsWith('file:')) mkdirSync(dirname(url.slice('file:'.length)), { recursive: true })
-    const db = new Db(createClient({ url, authToken }))
+    // A long-running server idles for hours; a libsql:// WebSocket can go stale and fail the next query
+    // (seen live 2026-11-24). Stateless HTTPS opens a fresh request every time and was faster too.
+    const db = new Db(createClient({ url: url.replace(/^libsql:\/\//, 'https://'), authToken }))
     await db.c.executeMultiple(SCHEMA)
     await db.migrate()
     return db

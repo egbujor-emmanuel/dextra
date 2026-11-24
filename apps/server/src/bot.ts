@@ -1,7 +1,7 @@
 import { Bot, GrammyError, InlineKeyboard, type Context } from 'grammy'
 import { InvalidTransitionError, shortDate, type Agreement } from '@dextra/core'
 import type { Db } from './db'
-import { ServiceError } from './errors'
+import { describeError, ServiceError } from './errors'
 import { safeName } from './ids'
 import type { AgreementService, Messenger } from './service'
 
@@ -72,6 +72,7 @@ export function trackerKeyboard(a: Agreement, wearerName: string): InlineKeyboar
 }
 
 async function replyError(ctx: Context, e: unknown): Promise<void> {
+  if (!(e instanceof ServiceError) && !(e instanceof InvalidTransitionError)) console.error(`[dextra] bot handler failed: ${describeError(e)}`)
   const message =
     e instanceof ServiceError ? e.message : e instanceof InvalidTransitionError ? 'That was already handled.' : 'Something went wrong. Please try again.'
   await ctx.reply(message).catch(() => undefined)
