@@ -48,6 +48,7 @@ class RecordingMessenger implements Messenger {
   checklists: { businessConnectionId: string; chatId: number; title: string; tasks: string[] }[] = []
   texts: { businessConnectionId: string; chatId: number; text: string }[] = []
   trackers: number[] = []
+  trackerTexts: { chatId: number; text?: string }[] = []
   failChecklist = false
   failCard = false
   async sendAgreementCard(p: { businessConnectionId: string; chatId: number; reviewUrl: string }) {
@@ -63,8 +64,9 @@ class RecordingMessenger implements Messenger {
   async postText(p: { businessConnectionId: string; chatId: number; text: string }) {
     this.texts.push(p)
   }
-  async sendTracker(p: { chatId: number }) {
+  async sendTracker(p: { chatId: number; text?: string }) {
     this.trackers.push(p.chatId)
+    this.trackerTexts.push({ chatId: p.chatId, text: p.text })
   }
   async notify() {}
 }
@@ -303,6 +305,34 @@ describe('send → confirm / amend → checklist', () => {
     const a = (await db.agreement(id))!.agreement
     expect(a.status).toBe('expired')
     expect(a.commitments).toEqual([])
+  })
+})
+
+describe('due-date reminders', () => {
+  beforeEach(pairWearer)
+  const at = (iso: string) => new AgreementService({ db, hub, transcriber, extractor, messenger, botUsername: 'DextraBot', now: () => new Date(iso) })
+
+  it('nudges the owner the day before and on the day, then both once overdue; never twice', async () => {
+    const id = await sentAgreement()
+    await service.confirm(id, OMAR) // deck is Omar's, due Fri 27 Nov
+    messenger.trackerTexts = []
+    expect(await at('2026-11-26T09:00:00.000Z').sendReminders()).toBe(1)
+    expect(messenger.trackerTexts[0]).toMatchObject({ chatId: OMAR })
+    expect(messenger.trackerTexts[0]!.text).toContain('⏰ Due tomorrow: send the deck')
+    expect(await at('2026-11-26T15:00:00.000Z').sendReminders()).toBe(0) // already sent
+    expect(await at('2026-11-27T07:00:00.000Z').sendReminders()).toBe(1)
+    expect(messenger.trackerTexts[1]!.text).toContain('⏰ Due today')
+    expect(await at('2026-11-28T08:00:00.000Z').sendReminders()).toBe(2) // overdue: Omar and the wearer
+    expect(messenger.trackerTexts.slice(2).map(t => t.chatId).sort()).toEqual([WEARER, OMAR].sort())
+    expect(messenger.trackerTexts[3]!.text).toContain('Omar Haddad agreed to this with you.')
+  })
+
+  it('sends nothing once the item is ticked done', async () => {
+    const id = await sentAgreement()
+    await service.confirm(id, OMAR)
+    await service.markDone(id, OMAR, 0)
+    messenger.trackerTexts = []
+    expect(await at('2026-11-28T08:00:00.000Z').sendReminders()).toBe(0)
   })
 })
 

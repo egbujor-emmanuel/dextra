@@ -51,8 +51,8 @@ export class TelegramMessenger implements Messenger {
     await this.bot.api.sendMessage(p.chatId, p.text.slice(0, 4000), { business_connection_id: p.businessConnectionId, link_preview_options: { is_disabled: true } })
   }
 
-  async sendTracker(p: { chatId: number; agreement: Agreement; wearerName: string }): Promise<void> {
-    const text = `Agreed ✓ ${p.wearerName} & ${p.agreement.counterpartyName}\n\nTap each item when it's done. Both of you see the same record.`
+  async sendTracker(p: { chatId: number; agreement: Agreement; wearerName: string; text?: string }): Promise<void> {
+    const text = p.text ?? `Agreed ✓ ${p.wearerName} & ${p.agreement.counterpartyName}\n\nTap each item when it's done. Both of you see the same record.`
     await this.bot.api.sendMessage(p.chatId, text, { reply_markup: trackerKeyboard(p.agreement, p.wearerName) })
   }
 

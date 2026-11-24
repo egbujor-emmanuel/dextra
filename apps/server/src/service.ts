@@ -1,6 +1,9 @@
 import {
   agreementHash,
   createDraft,
+  dueReminders,
+  shortDate,
+  type ReminderKind,
   normalizeForMatch,
   pickWearer,
   relabelByTurns,
@@ -41,7 +44,7 @@ export interface Messenger {
   /** Plain message in the wearer's chat with the counterparty (fallback when a checklist is refused). */
   postText(p: { businessConnectionId: string; chatId: number; text: string }): Promise<void>
   /** "Tap when done" buttons in one person's private chat with the bot (used when no checklist could be shared). */
-  sendTracker(p: { chatId: number; agreement: Agreement; wearerName: string }): Promise<void>
+  sendTracker(p: { chatId: number; agreement: Agreement; wearerName: string; text?: string }): Promise<void>
   notify(chatId: number, text: string): Promise<void>
 }
 
@@ -392,15 +395,54 @@ export class AgreementService {
 
   // ── housekeeping ────────────────────────────────────────────────────
   /** Expire agreements nobody answered within 7 days, scrub their content, prune stale drafts and contacts. */
-  async housekeeping(): Promise<{ expired: number }> {
+  async housekeeping(): Promise<{ expired: number; reminded: number }> {
     const stale = await this.d.db.staleAwaiting(this.nowISO(-AWAIT_TTL_MS))
     for (const { agreement, deviceId } of stale) {
       await this.serial(agreement.id, () => this.persist(deviceId, scrub(transition(agreement, { type: 'expire', at: this.nowISO() })))).catch(() => undefined)
     }
     await this.d.db.purgeExpiredDrafts(this.nowISO())
     await this.d.db.pruneContacts(this.nowISO(-REPLY_WINDOW_MS))
-    return { expired: stale.length }
+    const reminded = await this.sendReminders()
+    return { expired: stale.length, reminded }
   }
+
+  /**
+   * Due-date nudges (PRD §3 step 9) in each person's private bot chat, with the same tap-when-done buttons.
+   * The timing rules live in core (`dueReminders`); a reminder is recorded once attempted, so a failure never spams.
+   */
+  async sendReminders(): Promise<number> {
+    let sent = 0
+    for (const { agreement: a } of await this.d.db.confirmedAgreements()) {
+      const due = dueReminders(a, this.nowISO(), await this.d.db.sentReminders(a.id))
+      if (due.length === 0) continue
+      const wearerName = (await this.d.db.wearer(a.wearerTgId))?.name ?? 'You'
+      for (const r of due) {
+        const c = a.commitments.find(x => x.id === r.commitmentId)
+        if (!c) continue
+        const ownerTg = c.by === 'wearer' ? a.wearerTgId : a.counterpartyTgId
+        const otherTg = c.by === 'wearer' ? a.counterpartyTgId : a.wearerTgId
+        const ownerName = c.by === 'wearer' ? wearerName : a.counterpartyName
+        const otherName = c.by === 'wearer' ? a.counterpartyName : wearerName
+        const when = c.dueISO ? shortDate(c.dueISO) : ''
+        const lines: [number | undefined, string][] = [[ownerTg, reminderText(r.kind, c.what, when, `You agreed this with ${otherName}.`)]]
+        if (r.to === 'both') lines.push([otherTg, reminderText(r.kind, c.what, when, `${ownerName} agreed to this with you.`)])
+        for (const [chatId, text] of lines) {
+          if (chatId === undefined) continue
+          await this.d.messenger.sendTracker({ chatId, agreement: a, wearerName, text }).then(
+            () => { sent++ },
+            e => this.d.log?.(`[dextra] reminder not sent: ${errorText(e)}`),
+          )
+        }
+        await this.d.db.markReminder(a.id, c.id, r.kind, this.nowISO())
+      }
+    }
+    return sent
+  }
+}
+
+function reminderText(kind: ReminderKind, what: string, when: string, who: string): string {
+  const head = kind === 'tomorrow' ? '⏰ Due tomorrow' : kind === 'today' ? '⏰ Due today' : `⚠️ Overdue since ${when}`
+  return `${head}: ${what}\n${who}\n\nTap it below once it's done.`
 }
 
 function errorText(e: unknown): string {

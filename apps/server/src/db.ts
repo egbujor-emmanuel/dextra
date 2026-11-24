@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS agreements (id TEXT PRIMARY KEY, device_id TEXT NOT N
 CREATE TABLE IF NOT EXISTS drafts (agreement_id TEXT PRIMARY KEY, utterances_json TEXT NOT NULL, proposal_json TEXT NOT NULL, wearer_speaker INTEGER NOT NULL, contact_index INTEGER NOT NULL DEFAULT 0, captured_at TEXT NOT NULL, expires_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS amend_sessions (tg_id INTEGER PRIMARY KEY, agreement_id TEXT NOT NULL, started_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS checklists (agreement_id TEXT PRIMARY KEY, business_connection_id TEXT NOT NULL, chat_id INTEGER NOT NULL, message_id INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS reminders (agreement_id TEXT NOT NULL, commitment_id TEXT NOT NULL, kind TEXT NOT NULL, sent_at TEXT NOT NULL, PRIMARY KEY (agreement_id, commitment_id, kind));
 CREATE INDEX IF NOT EXISTS agreements_device ON agreements(device_id, updated_at);
 `
 
@@ -227,6 +228,22 @@ export class Db {
   async staleAwaiting(beforeISO: string): Promise<{ agreement: Agreement; deviceId: string }[]> {
     const rows = await this.all<{ json: string; device_id: string }>("SELECT json, device_id FROM agreements WHERE status IN ('sent', 'amended') AND updated_at <= ?", [beforeISO])
     return rows.map(r => ({ agreement: JSON.parse(r.json) as Agreement, deviceId: r.device_id }))
+  }
+
+  /** Confirmed (open) agreements: the only ones that can owe a reminder. */
+  async confirmedAgreements(): Promise<{ agreement: Agreement; deviceId: string }[]> {
+    const rows = await this.all<{ json: string; device_id: string }>("SELECT json, device_id FROM agreements WHERE status = 'confirmed'")
+    return rows.map(r => ({ agreement: JSON.parse(r.json) as Agreement, deviceId: r.device_id }))
+  }
+
+  /** Keys (`commitmentId:kind`) of reminders already sent for one agreement. */
+  async sentReminders(agreementId: string): Promise<Set<string>> {
+    const rows = await this.all<{ commitment_id: string; kind: string }>('SELECT commitment_id, kind FROM reminders WHERE agreement_id = ?', [agreementId])
+    return new Set(rows.map(r => `${r.commitment_id}:${r.kind}`))
+  }
+
+  async markReminder(agreementId: string, commitmentId: string, kind: string, at: string): Promise<void> {
+    await this.run('INSERT OR IGNORE INTO reminders (agreement_id, commitment_id, kind, sent_at) VALUES (?, ?, ?, ?)', [agreementId, commitmentId, kind, at])
   }
 
   /** Contacts outside Telegram's 24 h window can't be messaged anyway; don't keep their names. */
