@@ -12,7 +12,9 @@ import {
 } from '@dextra/core'
 import { z } from 'zod'
 
-export const API_BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'http://localhost:8787'
+/** The live server (Render, free plan) for packaged builds; a local server in development unless VITE_API_BASE says otherwise. */
+const LIVE_API = 'https://dextra-qfz7.onrender.com'
+export const API_BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? (import.meta.env.PROD ? LIVE_API : 'http://localhost:8787')
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly refusal: string, message: string) {
