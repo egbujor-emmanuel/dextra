@@ -26,6 +26,9 @@ const SLOTS: Slot[] = [
  * Owns the lens. Host calls are serialised (the SDK forbids concurrent sends) and only
  * containers whose text changed are rewritten (each call costs ~83 ms over BLE).
  */
+/** Never equal to real text: forces a slot to be written. */
+const UNKNOWN = '\u0000'
+
 export class Display {
   private queue: Promise<unknown> = Promise.resolve()
   private current: TextFrame = { header: '', body: '', footer: '' }
@@ -50,7 +53,9 @@ export class Display {
         }),
       }),
     )
-    this.current = first
+    // Don't assume the lens shows `first`: if a startup page already exists (an app reload), the host may keep the old
+    // containers. Marking every slot unknown makes the next show() rewrite all three once.
+    this.current = { header: UNKNOWN, body: UNKNOWN, footer: UNKNOWN }
     return result === 0
   }
 
