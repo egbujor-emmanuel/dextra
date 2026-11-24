@@ -139,6 +139,7 @@ export class AgreementService {
       throw new ServiceError('BAD_AUDIO', 'Unexpected audio format.', 413)
     }
     const heard = withLoudness(await this.d.transcriber.transcribe(wav), pcm)
+    this.d.log?.(`[dextra] capture ${seconds.toFixed(1)}s ${pcm.sampleRate}Hz rms ${rmsOf(pcm.samples).toFixed(3)} → ${heard.length} lines`) // numbers only, never words
     const { utterances } = attributeSpeakers(heard, pcm) // voice separation → voice pitch → (LLM turns, below)
     return this.captureUtterances(deviceId, utterances)
   }
@@ -360,6 +361,12 @@ export class AgreementService {
     await this.d.db.pruneContacts(this.nowISO(-REPLY_WINDOW_MS))
     return { expired: stale.length }
   }
+}
+
+function rmsOf(samples: Int16Array): number {
+  let sum = 0
+  for (const s of samples) sum += (s / 32768) ** 2
+  return samples.length ? Math.sqrt(sum / samples.length) : 0
 }
 
 /** Discarded and expired records keep no conversation content (PRD §6). */

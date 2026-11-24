@@ -1,7 +1,7 @@
 import { AudioInputSource, waitForEvenAppBridge, type EvenAppBridge } from '@evenrealities/even_hub_sdk'
 import type { AgreementView, Contact, DeviceState, ServerEvent } from '@dextra/core'
 import { Api, ApiError } from './api'
-import { PcmRing, SAMPLE_RATE, toWav } from './audio'
+import { levels, PcmRing, SAMPLE_RATE, toWav } from './audio'
 import { Display, MENU } from './display'
 import { createGestureReader, type Gesture } from './input'
 import { frameFor, type Screen } from './screens'
@@ -73,7 +73,8 @@ async function lock(ctx: Ctx): Promise<void> {
   const samples = ctx.ring.snapshot()
   if (samples.length < MIN_LOCK_SECONDS * SAMPLE_RATE) return refusal(ctx, 'TOO_SHORT', 'Not enough conversation heard yet. Keep talking, then hold again.')
   await show(ctx, { kind: 'locking' })
-  mark('lock')
+  const level = levels(samples)
+  mark(`lock ${(samples.length / SAMPLE_RATE).toFixed(1)}s rms ${level.rms.toFixed(3)} peak ${level.peak.toFixed(2)}`)
   await guarded(ctx, async () => {
     const res = await ctx.api.capture(toWav(samples))
     if ('refusal' in res) return refusal(ctx, res.refusal, res.message)
@@ -237,8 +238,14 @@ async function boot(): Promise<void> {
     listening: false, contacts: [], busy: false,
   }
   const read = createGestureReader()
+  let audioFormatLogged = false
   bridge.onEvenHubEvent(e => {
     if (e.audioEvent) {
+      const pcm = e.audioEvent.audioPcm as unknown
+      if (!audioFormatLogged) {
+        audioFormatLogged = true
+        mark(`audio frames: ${Object.prototype.toString.call(pcm)} length ${(pcm as { length?: number }).length ?? '?'}`)
+      }
       if (ctx.listening) ctx.ring.pushBytes(e.audioEvent.audioPcm)
       return
     }

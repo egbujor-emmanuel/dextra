@@ -48,6 +48,18 @@ export class PcmRing {
   }
 }
 
+/** Loudness summary (0..1) for diagnostics. Numbers only: never the audio itself. */
+export function levels(samples: Int16Array): { rms: number; peak: number } {
+  let sum = 0
+  let peak = 0
+  for (const s of samples) {
+    const v = Math.abs(s) / 32768
+    sum += v * v
+    if (v > peak) peak = v
+  }
+  return { rms: samples.length ? Math.sqrt(sum / samples.length) : 0, peak }
+}
+
 /** Minimal 44-byte RIFF/WAVE header + PCM16 mono payload. */
 export function toWav(samples: Int16Array, sampleRate = SAMPLE_RATE): Uint8Array {
   const dataBytes = samples.length * 2
