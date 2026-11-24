@@ -47,6 +47,10 @@ export class TelegramMessenger implements Messenger {
     return { messageId: msg.message_id }
   }
 
+  async postText(p: { businessConnectionId: string; chatId: number; text: string }): Promise<void> {
+    await this.bot.api.sendMessage(p.chatId, p.text.slice(0, 4000), { business_connection_id: p.businessConnectionId, link_preview_options: { is_disabled: true } })
+  }
+
   async notify(chatId: number, text: string): Promise<void> {
     await this.bot.api.sendMessage(chatId, text)
   }

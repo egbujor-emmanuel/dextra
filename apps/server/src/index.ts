@@ -16,6 +16,7 @@ const PURGE_EVERY_MS = 15 * 60_000
 const offlineMessenger: Messenger = {
   sendAgreementCard: () => Promise.reject(notConfigured('TELEGRAM', 'TELEGRAM_BOT_TOKEN')),
   postChecklist: () => Promise.reject(notConfigured('TELEGRAM', 'TELEGRAM_BOT_TOKEN')),
+  postText: () => Promise.reject(notConfigured('TELEGRAM', 'TELEGRAM_BOT_TOKEN')),
   notify: () => Promise.resolve(),
 }
 

@@ -38,6 +38,8 @@ const SAMPLE_RATE_RANGE = [8000, 48000] as const
 export interface Messenger {
   sendAgreementCard(p: { businessConnectionId: string; chatId: number; wearerName: string; agreement: Agreement; reviewUrl: string }): Promise<void>
   postChecklist(p: { businessConnectionId: string; chatId: number; title: string; tasks: string[] }): Promise<{ messageId: number }>
+  /** Plain message in the wearer's chat with the counterparty (fallback when a checklist is refused). */
+  postText(p: { businessConnectionId: string; chatId: number; text: string }): Promise<void>
   notify(chatId: number, text: string): Promise<void>
 }
 
@@ -321,12 +323,18 @@ export class AgreementService {
     const wearer = await this.d.db.wearer(a.wearerTgId)
     const contact = a.counterpartyTgId ? await this.d.db.contact(a.wearerTgId, a.counterpartyTgId) : undefined
     if (wearer?.business_connection_id && contact && withHash.commitments.length > 0) {
+      const target = { businessConnectionId: wearer.business_connection_id, chatId: contact.chat_id }
+      const title = `Agreed · ${wearer.name} & ${a.counterpartyName}`
+      const tasks = withHash.commitments.map(c => checklistTask(c, a.counterpartyName, wearer.name))
       try {
-        const tasks = withHash.commitments.map(c => checklistTask(c, a.counterpartyName, wearer.name))
-        const { messageId } = await this.d.messenger.postChecklist({ businessConnectionId: wearer.business_connection_id, chatId: contact.chat_id, title: `Agreed · ${wearer.name} & ${a.counterpartyName}`, tasks })
-        await this.d.db.saveChecklist({ agreement_id: a.id, business_connection_id: wearer.business_connection_id, chat_id: contact.chat_id, message_id: messageId })
-      } catch {
-        this.d.log?.('[dextra] checklist not posted (Telegram refused); agreement stays confirmed')
+        const { messageId } = await this.d.messenger.postChecklist({ ...target, title, tasks })
+        await this.d.db.saveChecklist({ agreement_id: a.id, business_connection_id: target.businessConnectionId, chat_id: target.chatId, message_id: messageId })
+      } catch (e) {
+        // Telegram's own reason (e.g. "400: Bad Request: …"); grammY error messages never include the token.
+        this.d.log?.(`[dextra] checklist refused: ${errorText(e)}; posting the record as a message instead`)
+        // Both people still get the shared record in their chat, with its fingerprint.
+        const text = [`✓ ${title}`, '', ...tasks.map(t => `• ${t}`), '', `Record ${withHash.hash.slice(0, 12)} · Dextra`].join('\n')
+        await this.d.messenger.postText({ ...target, text }).catch(err => this.d.log?.(`[dextra] confirmation message refused too: ${errorText(err)}; agreement stays confirmed`))
       }
     }
     return view
@@ -361,6 +369,10 @@ export class AgreementService {
     await this.d.db.pruneContacts(this.nowISO(-REPLY_WINDOW_MS))
     return { expired: stale.length }
   }
+}
+
+function errorText(e: unknown): string {
+  return (e instanceof Error ? e.message : String(e)).replace(/bot\d+:[\w-]+/g, 'bot<redacted>').slice(0, 240)
 }
 
 function rmsOf(samples: Int16Array): number {

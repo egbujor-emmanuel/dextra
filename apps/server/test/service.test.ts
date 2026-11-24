@@ -46,6 +46,7 @@ class ScriptedExtractor implements Extractor {
 class RecordingMessenger implements Messenger {
   cards: { chatId: number; businessConnectionId: string; reviewUrl: string }[] = []
   checklists: { businessConnectionId: string; chatId: number; title: string; tasks: string[] }[] = []
+  texts: { businessConnectionId: string; chatId: number; text: string }[] = []
   failChecklist = false
   failCard = false
   async sendAgreementCard(p: { businessConnectionId: string; chatId: number; reviewUrl: string }) {
@@ -57,6 +58,9 @@ class RecordingMessenger implements Messenger {
     if (this.failChecklist) throw new Error('telegram 400')
     this.checklists.push(p)
     return { messageId: 555 }
+  }
+  async postText(p: { businessConnectionId: string; chatId: number; text: string }) {
+    this.texts.push(p)
   }
   async notify() {}
 }
@@ -223,11 +227,16 @@ describe('send → confirm / amend → checklist', () => {
     })
   })
 
-  it('a confirmation survives a Telegram checklist failure', async () => {
+  it('a confirmation survives a Telegram checklist failure and still shares the record as a message', async () => {
     const id = await sentAgreement()
     messenger.failChecklist = true
     await service.confirm(id, OMAR)
-    expect((await db.agreement(id))!.agreement.status).toBe('confirmed')
+    const saved = (await db.agreement(id))!.agreement
+    expect(saved.status).toBe('confirmed')
+    expect(messenger.texts).toHaveLength(1)
+    expect(messenger.texts[0]).toMatchObject({ businessConnectionId: 'bc_1', chatId: OMAR_CHAT })
+    expect(messenger.texts[0]!.text).toContain('Omar Haddad: send the deck · Friday')
+    expect(messenger.texts[0]!.text).toContain(`Record ${saved.hash!.slice(0, 12)}`)
   })
 
   it('a second confirm is a typed refusal, not a crash, and posts no second checklist', async () => {
