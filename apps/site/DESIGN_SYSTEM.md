@@ -14,6 +14,15 @@ Read this, then `design-system/dextra/MASTER.md`, before touching `apps/site`. F
 - **21st.dev MCP** supplied two components, both adapted:
   - `radiumcoders/brutal-button` → `src/components/ui/BrutalButton.tsx`;
   - `daiwiikharihar/neo-brutalist-kinetic-deck` → `src/components/records/RecordDeck.tsx`. It was ported from framer-motion to GSAP Draggable, and its right-click menu was replaced with visible Flip and Next buttons.
+- **Demo Shield** (21st.dev / MouseUI, mouseui.21st.dev) → `src/components/ui/demo-shield.tsx`. It wraps the Records section and starts off. When armed, it masks the names in the visible record; the names come from `PEOPLE` in `src/lib/records.ts`. Changes from the original:
+  - the watermark is off (credited here instead);
+  - the toggle's `aria-label` was removed so its accessible name matches its visible text;
+  - the tokens `--mute: #5c584f` and `--tally: #dc2626` are overridden for 4.5:1 contrast;
+  - index guards were added for `noUncheckedIndexedAccess`;
+  - the record cards mark their hidden faces `data-shield-ignore`.
+
+  The component's own demo (invented customer data) was not used.
+- **shadcn structure:** `components.json`, the `@/` alias (tsconfig and Vite), and `cn()` in `src/lib/utils.ts` (clsx + tailwind-merge).
 
 ## Rules
 

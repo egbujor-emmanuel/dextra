@@ -27,7 +27,7 @@ Everything else is dropped with a typed code (`UNSUPPORTED_BY_TRANSCRIPT`, `DUPL
 
 | Claim | How to check |
 |---|---|
-| 111 tests pass (core 50, glasses 15, server 46) | `npm test` |
+| 112 tests pass (core 50, glasses 15, server 47) | `npm test` |
 | Typecheck clean | `npm run typecheck` |
 | Simulator end-to-end | `npm run try` in one terminal, then `npm run e2e` |
 | Each safety rule has a test | [THREAT_MODEL.md](THREAT_MODEL.md) (29 invariants) |

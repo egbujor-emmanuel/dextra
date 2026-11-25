@@ -61,11 +61,13 @@ export function RecordDeck() {
             data-record={i}
             className="record-card absolute inset-x-4 top-4 h-[21.5rem] cursor-grab active:cursor-grabbing"
             aria-hidden={i !== front}
+            // Demo Shield masks only what can be seen: the front card's visible face.
+            data-shield-ignore={i !== front ? '' : undefined}
             aria-label={`Record ${record.hash.slice(0, 8)}, ${record.status}`}
           >
             <div className="record-inner relative h-full w-full" style={{ transformStyle: 'preserve-3d' }}>
-              <Face record={record} tone={FACE[i]!} />
-              <Back record={record} tone={FACE[i]!} />
+              <Face record={record} tone={FACE[i]!} isHidden={!!flipped[i]} />
+              <Back record={record} tone={FACE[i]!} isHidden={!flipped[i]} />
             </div>
           </article>
         ))}
@@ -83,9 +85,11 @@ export function RecordDeck() {
   )
 }
 
-function Face({ record, tone }: { record: RealRecord; tone: string }) {
+type FaceProps = { record: RealRecord; tone: string; isHidden: boolean }
+
+function Face({ record, tone, isHidden }: FaceProps) {
   return (
-    <div className={`brut-shadow absolute inset-0 flex flex-col p-6 ${tone}`} style={{ backfaceVisibility: 'hidden' }}>
+    <div className={`brut-shadow absolute inset-0 flex flex-col p-6 ${tone}`} style={{ backfaceVisibility: 'hidden' }} data-shield-ignore={isHidden ? '' : undefined}>
       <div className="flex items-start justify-between gap-3">
         <span aria-hidden className="size-8 rounded-full border-[3px] border-black bg-paper" />
         <span className={`border-[3px] border-black px-2 py-0.5 font-display text-[0.8rem] font-extrabold uppercase ${record.status === 'fulfilled' ? 'bg-blue text-white' : 'bg-paper'}`}>
@@ -103,9 +107,9 @@ function Face({ record, tone }: { record: RealRecord; tone: string }) {
   )
 }
 
-function Back({ record, tone }: { record: RealRecord; tone: string }) {
+function Back({ record, tone, isHidden }: FaceProps) {
   return (
-    <div className={`brut-shadow absolute inset-0 flex flex-col p-6 ${tone}`} style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+    <div className={`brut-shadow absolute inset-0 flex flex-col p-6 ${tone}`} style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} data-shield-ignore={isHidden ? '' : undefined}>
       <span aria-hidden className="ml-auto size-8 rounded-full border-[3px] border-black bg-paper" />
       <h3 className="mt-3 font-display text-[1.15rem] font-extrabold">Timeline, UTC, 24 Nov 2026</h3>
       <ol className="mt-3 grid gap-2 text-[0.98rem]">

@@ -42,3 +42,6 @@ export const RECORDS: RealRecord[] = [
     ],
   },
 ]
+
+/** The people named in those records, as stored: the confirming account and the person to be introduced. */
+export const PEOPLE = ['Attrito', 'Sarah']

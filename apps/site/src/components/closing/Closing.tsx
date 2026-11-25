@@ -1,30 +1,8 @@
 import { useRef } from 'react'
 import { BOT_HANDLE, BOT_URL, EVAL, INVARIANTS, REPO_URL, TESTS } from '../../lib/content'
 import { gsap, prefersReducedMotion, useGSAP } from '../../lib/motion'
-import { RecordDeck } from '../records/RecordDeck'
 import { BrutalLink } from '../ui/BrutalButton'
 import { CopyCommand } from '../ui/CopyCommand'
-
-/** Records: the three real records as a deck (21st kinetic deck, ported to GSAP). */
-export function Records() {
-  return (
-    <section id="records" aria-labelledby="records-heading" className="border-y-[3px] border-black bg-blue-soft">
-      <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-[var(--space-section)] sm:px-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div>
-          <h2 id="records-heading" className="text-[clamp(1.9rem,1.3rem+1.8vw,2.8rem)] font-extrabold leading-[1.05] tracking-[-0.02em]">
-            One record, agreed by both people.
-          </h2>
-          <p className="mt-4 max-w-[46ch] text-ink-2">
-            Not a note only you can see, and not a transcript of everything said. Just what was promised, by whom, and the
-            moment the other person agreed, sealed with a SHA-256 of what was agreed. Then you both tick it off, and
-            whoever owes it gets a reminder the day before.
-          </p>
-        </div>
-        <RecordDeck />
-      </div>
-    </section>
-  )
-}
 
 /** A real sequence, so numbering is meaningful. */
 const STEPS = [

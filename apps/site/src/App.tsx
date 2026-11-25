@@ -1,6 +1,6 @@
 import { ReactLenis, type LenisRef } from 'lenis/react'
 import { lazy, Suspense, useEffect, useRef } from 'react'
-import { Footer, Proof, Records, Steps, Try } from './components/closing/Closing'
+import { Footer, Proof, Steps, Try } from './components/closing/Closing'
 import { DemoGrid } from './components/demo/DemoGrid'
 import { Marquee } from './components/marquee/Marquee'
 import { BrutalLink } from './components/ui/BrutalButton'
@@ -9,6 +9,8 @@ import { gsap, prefersReducedMotion, ScrollTrigger } from './lib/motion'
 
 // The live validator pulls in zod; it loads after the first screen.
 const Gate = lazy(() => import('./components/gate/Gate'))
+// The records deck and Demo Shield sit below the fold too.
+const Records = lazy(() => import('./components/records/Records'))
 
 function Nav() {
   return (
@@ -44,7 +46,9 @@ function Page() {
         <Suspense fallback={<div className="min-h-[60vh]" aria-hidden />}>
           <Gate />
         </Suspense>
-        <Records />
+        <Suspense fallback={<div className="min-h-[40rem]" aria-hidden />}>
+          <Records />
+        </Suspense>
         <Steps />
         <Proof />
         <Try />

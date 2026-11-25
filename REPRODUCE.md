@@ -8,7 +8,7 @@ Needs Node 22.5+ and git. Steps 1, 2, 4, 5 and 6 were run on Windows 10 (Git Bas
 git clone https://github.com/egbujor-emmanuel/dextra && cd dextra
 npm ci
 npm run typecheck   # clean
-npm test            # 111 passing: core 50, glasses 15, server 46
+npm test            # 112 passing: core 50, glasses 15, server 47
 ```
 
 ## 2. Try it against the live server (no keys)

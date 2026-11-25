@@ -113,7 +113,7 @@ Deploy: [`render.yaml`](render.yaml) (Render free plan). [`scripts/deploy/`](scr
 
 | Check | Command | Result |
 |---|---|---|
-| Unit and integration tests (core, glasses, server) | `npm test` | **111 passing** |
+| Unit and integration tests (core, glasses, server) | `npm test` | **112 passing** |
 | Typecheck | `npm run typecheck` | clean |
 | Simulator end to end | `npm run e2e` | PASS per check |
 | Extraction eval on the free model | `npm run eval -w @dextra/server` | 12 conversations, 17 commitments: **precision 1.00, recall 0.94**; **0** invented commitments reached the lens (last two runs, 2026-11-24, `openai/gpt-oss-120b`) |
