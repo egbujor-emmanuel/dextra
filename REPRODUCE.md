@@ -36,6 +36,8 @@ In @BotFather, turn on **Secretary Mode** for your bot. For data that survives r
 ```bash
 node scripts/deploy/turso-setup.mjs     # needs TURSO_API_TOKEN in apps/server/.env
 node scripts/deploy/render-deploy.mjs   # needs RENDER_API_KEY and a Render workspace named "Dextra"
+node scripts/deploy/render-site.mjs     # the landing page as a free static site (never sleeps)
+node scripts/deploy/cronjob-setup.mjs   # needs CRONJOB_API_KEY: wakes the server every 15 min for reminders
 ```
 
 Both scripts read keys from `apps/server/.env` and print only names, IDs and hostnames.
