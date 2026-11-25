@@ -73,7 +73,7 @@ server ─► Deepgram: speech-to-text and who spoke
 lens  ◄─ card ──tap──► Telegram business bot sends it as you, into the chat with them
 their tap: Confirm ─► SHA-256 record (Turso) ─► shared checklist (wearer has Premium) or record message + tap-when-done buttons
            Change  ─► their correction comes back to your lens to accept or reject
-every 15 min       ─► due tomorrow / due today / overdue reminders with the same buttons (cron-job.org wakes the free server; GitHub Actions hourly as a backup)
+every 10 min       ─► due tomorrow / due today / overdue reminders with the same buttons (cron-job.org wakes the free server; GitHub Actions hourly as a backup)
 ```
 
 **The LLM proposes, deterministic code decides.** Every proposed commitment carries a verbatim quote. [`packages/core/src/validate.ts`](packages/core/src/validate.ts) drops any commitment whose quote isn't in what *that speaker* said (`UNSUPPORTED_BY_TRANSCRIPT`). It also drops any amount that wasn't spoken, and merges repeats (`DUPLICATE`). A test proves an invented "pay $5,000" never reaches the lens.
