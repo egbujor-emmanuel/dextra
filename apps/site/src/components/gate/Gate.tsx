@@ -1,5 +1,9 @@
 import { validateProposal } from '@dextra/core/validate'
 import { useMemo, useState } from 'react'
+import { z } from 'zod'
+
+// The site's CSP forbids eval; tell zod not to probe for it (it would fall back anyway, but logs a violation).
+z.config({ jitless: true })
 
 /** The transcript from apps/server/test/service.test.ts. Speaker 0 is you (the wearer), 1 is them. */
 const TRANSCRIPT = [

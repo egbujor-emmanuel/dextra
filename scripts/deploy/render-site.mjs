@@ -24,6 +24,8 @@ const HEADERS = [
   { path: '/*', name: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { path: '/*', name: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
   { path: '/*', name: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  // llms.txt is Markdown (llmstxt.org); serve it as such so AI crawlers and Lighthouse read the heading.
+  { path: '/llms.txt', name: 'Content-Type', value: 'text/markdown; charset=utf-8' },
 ]
 
 const WORKSPACE = env.RENDER_WORKSPACE ?? 'Dextra'
