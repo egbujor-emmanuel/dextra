@@ -11,13 +11,13 @@ const Gate = lazy(() => import('./components/gate/Gate'))
 function Nav() {
   return (
     <header className="mx-auto flex max-w-7xl items-center justify-between px-4 pt-5 sm:px-6">
-      <a href="#top" className="font-display text-xl tracking-[0.08em]">
+      <a href="/" className="inline-flex min-h-11 items-center font-display text-xl tracking-[0.08em]">
         DEXTRA
       </a>
       <nav aria-label="Main" className="flex items-center gap-5 text-sm">
-        <a className="hidden hover:underline sm:inline" href="#gate">Try to fool it</a>
-        <a className="hidden hover:underline sm:inline" href="#how">How it works</a>
-        <a href={BOT_URL} target="_blank" rel="noopener noreferrer" className="rounded-full border border-ink/40 px-3.5 py-1.5 transition-colors hover:border-ink">
+        <a className="hidden min-h-11 items-center hover:underline sm:inline-flex" href="#gate">Try to fool it</a>
+        <a className="hidden min-h-11 items-center hover:underline sm:inline-flex" href="#how">How it works</a>
+        <a href={BOT_URL} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-full border border-ink/40 px-4 transition-colors hover:border-ink">
           {BOT_HANDLE}
         </a>
       </nav>
@@ -28,8 +28,11 @@ function Nav() {
 function Page() {
   return (
     <>
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-full focus:bg-ink focus:px-4 focus:text-stone">
+        Skip to the content
+      </a>
       <Nav />
-      <main id="top">
+      <main id="main">
         <Tablets />
         <Suspense fallback={<div className="min-h-[60vh]" aria-hidden />}>
           <Gate />

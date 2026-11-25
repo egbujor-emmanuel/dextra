@@ -19,7 +19,7 @@ export function CopyCommand({ command, dark = false }: Props) {
   return (
     <div className={`flex items-center gap-3 rounded-lg border py-2 pl-4 pr-2 ${shell}`}>
       <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.84rem]">{command}</code>
-      <button type="button" onClick={handleCopy} className={`shrink-0 rounded-md border px-2.5 py-1 text-xs transition-colors active:scale-[0.97] ${button}`} aria-label={`Copy: ${command}`}>
+      <button type="button" onClick={handleCopy} className={`min-h-11 min-w-11 shrink-0 rounded-md border px-3 text-xs transition-colors active:scale-[0.97] ${button}`} aria-label={`Copy: ${command}`}>
         {copied ? 'Copied' : 'Copy'}
       </button>
     </div>

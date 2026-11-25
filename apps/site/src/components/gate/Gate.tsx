@@ -61,7 +61,7 @@ export default function Gate() {
                   setActive(i)
                 }}
                 aria-pressed={active === i}
-                className={`rounded-full border px-3.5 py-1.5 text-[0.85rem] transition-colors ${active === i ? 'border-ink bg-ink text-stone' : 'border-ink/30 hover:border-ink'}`}
+                className={`min-h-11 rounded-full border px-4 text-[0.85rem] transition-colors ${active === i ? 'border-ink bg-ink text-stone' : 'border-ink/30 hover:border-ink'}`}
               >
                 {p.label}
               </button>
@@ -88,7 +88,7 @@ export default function Gate() {
               <legend className="mb-1.5 text-[0.85rem]">Who owes it</legend>
               <div className="flex gap-2">
                 {([0, 1] as const).map(s => (
-                  <button key={s} type="button" onClick={() => update({ speaker: s })} aria-pressed={draft.speaker === s} className={`rounded-lg border px-3 py-1 text-sm ${draft.speaker === s ? 'border-ink bg-ink text-stone' : 'border-ink/30'}`}>
+                  <button key={s} type="button" onClick={() => update({ speaker: s })} aria-pressed={draft.speaker === s} className={`min-h-11 min-w-16 rounded-lg border px-4 text-sm ${draft.speaker === s ? 'border-ink bg-ink text-stone' : 'border-ink/30'}`}>
                     {s === 0 ? 'You' : 'Them'}
                   </button>
                 ))}
@@ -126,7 +126,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
         value={value}
         onChange={e => onChange(e.target.value)}
         maxLength={120}
-        className="rounded-lg border border-ink/30 bg-stone px-3 py-2 outline-none transition-colors focus:border-ink"
+        className="min-h-11 rounded-lg border border-ink/30 bg-stone px-3 py-2 outline-none transition-colors focus:border-ink"
       />
     </label>
   )

@@ -47,7 +47,7 @@ export function Tablets() {
           <h1 id="intro-heading" className="max-w-[40ch] text-[1.08rem] font-medium leading-snug">
             DEXTRA does it again with Even G2 glasses: say what you agreed, and the other person confirms it in Telegram.
           </h1>
-          <a href={BOT_URL} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-stone transition-transform active:scale-[0.98]">
+          <a href={BOT_URL} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-ink px-5 text-sm font-medium text-stone transition-transform active:scale-[0.98]">
             Open {BOT_HANDLE}
           </a>
         </div>
@@ -164,7 +164,7 @@ function Hinge() {
 function Seal({ hash }: { hash: string }) {
   return (
     <div
-      className="seal grid size-[86px] shrink-0 place-items-center text-center"
+      className="seal grid size-[96px] shrink-0 place-items-center text-center"
       style={{
         borderRadius: '47% 53% 51% 49% / 52% 46% 54% 48%',
         background: 'radial-gradient(circle at 35% 30%, #b04a33, #8c2f1c 55%, #5e1d10)',
@@ -173,8 +173,8 @@ function Seal({ hash }: { hash: string }) {
       }}
       title={`SHA-256 ${hash}`}
     >
-      <div className="grid size-[64px] place-items-center rounded-full border border-black/25 shadow-[inset_0_1px_2px_rgb(0_0_0/0.35)]">
-        <span className="font-mono text-[0.62rem] leading-tight text-[#f0c9b6]">
+      <div className="grid size-[76px] place-items-center rounded-full border border-black/25 shadow-[inset_0_1px_2px_rgb(0_0_0/0.35)]">
+        <span className="font-mono text-[0.75rem] leading-tight text-[#f0c9b6]">
           {shortHash(hash).split('…')[0]}
           <br />
           sha-256
