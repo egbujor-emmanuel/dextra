@@ -1,9 +1,11 @@
 import { useState } from 'react'
 
-/** A shell command with a real copy button (falls back to selecting the text if the clipboard is unavailable). */
-export function CopyCommand({ command, label }: { command: string; label?: string }) {
+type Props = { command: string; dark?: boolean }
+
+/** A shell command with a copy button. Real commands only; the copy confirms with "Copied". */
+export function CopyCommand({ command, dark = false }: Props) {
   const [copied, setCopied] = useState(false)
-  const copy = async () => {
+  const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(command)
       setCopied(true)
@@ -12,19 +14,12 @@ export function CopyCommand({ command, label }: { command: string; label?: strin
       setCopied(false)
     }
   }
+  const shell = dark ? 'border-stone/20 bg-stone/[0.06] text-stone' : 'border-ink/25 bg-stone-2/70 text-ink'
+  const button = dark ? 'border-stone/30 hover:border-stone' : 'border-ink/30 hover:border-ink'
   return (
-    <div className="group flex items-center gap-3 rounded-xl border border-line bg-ink-2 py-2 pl-4 pr-2 font-mono text-[0.85rem]">
-      {label && <span className="text-paper-3">{label}</span>}
-      <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-paper">
-        <span className="select-none text-lens-dim">$ </span>
-        {command}
-      </code>
-      <button
-        type="button"
-        onClick={copy}
-        className="shrink-0 rounded-lg border border-line px-2.5 py-1 font-sans text-xs text-paper-2 transition-colors hover:border-lens-dim hover:text-lens active:scale-[0.97]"
-        aria-label={`Copy command: ${command}`}
-      >
+    <div className={`flex items-center gap-3 rounded-lg border py-2 pl-4 pr-2 ${shell}`}>
+      <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.84rem]">{command}</code>
+      <button type="button" onClick={handleCopy} className={`shrink-0 rounded-md border px-2.5 py-1 text-xs transition-colors active:scale-[0.97] ${button}`} aria-label={`Copy: ${command}`}>
         {copied ? 'Copied' : 'Copy'}
       </button>
     </div>

@@ -1,28 +1,25 @@
 import { ReactLenis, type LenisRef } from 'lenis/react'
-import { useEffect, useRef } from 'react'
-import { Attack } from './components/attack/Attack'
-import { Footer, Privacy, Try } from './components/closing/Closing'
-import { Hero } from './components/hero/Hero'
-import { Proof } from './components/proof/Proof'
-import { Story } from './components/story/Story'
+import { lazy, Suspense, useEffect, useRef } from 'react'
+import { Footer, Proof, Steps, Try } from './components/closing/Closing'
+import { Tablets } from './components/tablets/Tablets'
 import { BOT_HANDLE, BOT_URL } from './lib/content'
 import { gsap, prefersReducedMotion, ScrollTrigger } from './lib/motion'
 
+// The live validator pulls in zod; it loads after the first screen.
+const Gate = lazy(() => import('./components/gate/Gate'))
+
 function Nav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line/60 bg-ink/75 backdrop-blur-md">
-      <nav aria-label="Main" className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-        <a href="#top" className="font-mono text-sm tracking-[0.25em] text-paper">
-          DEXTRA
+    <header className="mx-auto flex max-w-7xl items-center justify-between px-4 pt-5 sm:px-6">
+      <a href="#top" className="font-display text-xl tracking-[0.08em]">
+        DEXTRA
+      </a>
+      <nav aria-label="Main" className="flex items-center gap-5 text-sm">
+        <a className="hidden hover:underline sm:inline" href="#gate">Try to fool it</a>
+        <a className="hidden hover:underline sm:inline" href="#how">How it works</a>
+        <a href={BOT_URL} target="_blank" rel="noopener noreferrer" className="rounded-full border border-ink/40 px-3.5 py-1.5 transition-colors hover:border-ink">
+          {BOT_HANDLE}
         </a>
-        <div className="flex items-center gap-6 text-sm text-paper-2">
-          <a className="hidden hover:text-paper sm:inline" href="#how">How it works</a>
-          <a className="hidden hover:text-paper sm:inline" href="#proof">Proof</a>
-          <a className="hidden hover:text-paper sm:inline" href="#try">Try it</a>
-          <a href={BOT_URL} target="_blank" rel="noopener noreferrer" className="rounded-full border border-lens-dim px-3.5 py-1.5 text-lens transition-colors hover:bg-lens hover:text-ink">
-            {BOT_HANDLE}
-          </a>
-        </div>
       </nav>
     </header>
   )
@@ -31,16 +28,14 @@ function Nav() {
 function Page() {
   return (
     <>
-      <a href="#how" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-lens focus:px-3 focus:py-2 focus:text-ink">
-        Skip to how it works
-      </a>
       <Nav />
       <main id="top">
-        <Hero />
-        <Story />
-        <Attack />
+        <Tablets />
+        <Suspense fallback={<div className="min-h-[60vh]" aria-hidden />}>
+          <Gate />
+        </Suspense>
+        <Steps />
         <Proof />
-        <Privacy />
         <Try />
       </main>
       <Footer />

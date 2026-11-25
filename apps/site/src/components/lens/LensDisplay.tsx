@@ -50,7 +50,7 @@ export function LensDisplay({ frame, className = '' }: Props) {
 
   return (
     <figure className={`relative ${className}`}>
-      <div className="relative aspect-[2/1] overflow-hidden rounded-[28px] border border-line bg-[#040605] p-[3%] shadow-[0_40px_120px_-40px_rgb(92_255_157/0.3),inset_0_1px_0_rgb(255_255_255/0.06)]">
+      <div className="relative aspect-[2/1] overflow-hidden rounded-[28px] border border-black/60 bg-glass p-[3%] shadow-[0_30px_60px_-30px_rgb(30_27_24/0.6),inset_0_1px_0_rgb(255_255_255/0.06)]">
         <div ref={glass} className="relative h-full w-full [filter:brightness(1.25)_drop-shadow(0_0_8px_rgb(92_255_157/0.35))]">
           {useShader ? (
             <Suspense fallback={<PlainFrame src={current.src} />}>
@@ -80,10 +80,10 @@ export function LensDisplay({ frame, className = '' }: Props) {
         {/* Glass reflection along the top edge of the lens. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.035] via-white/[0.01] to-transparent" aria-hidden />
       </div>
-      <figcaption className="mt-3 flex items-center gap-2 text-xs text-paper-3">
-        <span className="inline-block size-1.5 rounded-full bg-lens shadow-[0_0_8px_var(--color-lens)]" aria-hidden />
+      <figcaption className="mt-3 flex items-center gap-2 text-xs text-ink-3">
+        <span className="inline-block size-1.5 rounded-full bg-ink-3" aria-hidden />
         <span>
-          Real capture from the Even simulator · <span className="text-paper-2">{current.label}</span>
+          The G2 lens, captured from the Even simulator: <span className="text-ink">{current.label.toLowerCase()}</span>
         </span>
       </figcaption>
       <span className="sr-only">The glasses display shows: {current.label}.</span>
