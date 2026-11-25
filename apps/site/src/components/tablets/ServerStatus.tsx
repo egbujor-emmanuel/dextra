@@ -35,7 +35,7 @@ export function ServerStatus() {
     <p role="status" className="flex items-start gap-2.5 text-sm text-ink-2">
       <span
         aria-hidden
-        className={`mt-[0.45em] size-2 shrink-0 rounded-full ${status === 'live' ? 'bg-[#2f7a4d]' : status === 'down' ? 'bg-seal' : 'animate-pulse bg-ink-3'}`}
+        className={`mt-[0.45em] size-2 shrink-0 rounded-full ${status === 'live' ? 'bg-ink shadow-[0_0_0_3px_rgb(243_233_214/0.25)]' : status === 'down' ? 'bg-dado' : 'animate-pulse bg-ink-3'}`}
       />
       {text}
     </p>

@@ -14,8 +14,8 @@ export function CopyCommand({ command, dark = false }: Props) {
       setCopied(false)
     }
   }
-  const shell = dark ? 'border-stone/20 bg-stone/[0.06] text-stone' : 'border-ink/25 bg-stone-2/70 text-ink'
-  const button = dark ? 'border-stone/30 hover:border-stone' : 'border-ink/30 hover:border-ink'
+  const shell = dark ? 'border-ink/20 bg-ink/[0.05] text-ink' : 'border-ink/25 bg-stone-2/70 text-ink'
+  const button = 'border-ink/30 hover:border-ink'
   return (
     <div className={`flex items-center gap-3 rounded-lg border py-2 pl-4 pr-2 ${shell}`}>
       <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[0.84rem]">{command}</code>

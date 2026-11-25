@@ -77,11 +77,11 @@ const TRY = [
 
 export function Try() {
   return (
-    <section id="try" aria-labelledby="try-heading" className="bg-ink text-stone">
+    <section id="try" aria-labelledby="try-heading" className="bg-dado text-ink">
       <div className="mx-auto grid max-w-7xl gap-12 px-4 py-[var(--space-section)] sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
           <h2 id="try-heading" className="font-display text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] leading-tight">Try it with two Telegram accounts</h2>
-          <p className="mt-4 max-w-[42ch] text-stone/80">
+          <p className="mt-4 max-w-[42ch] text-ink-2">
             No glasses and no API keys. The official Even simulator runs the real app against the live server, and your
             second account plays the other person.
           </p>
@@ -89,7 +89,7 @@ export function Try() {
             href={BOT_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 inline-block rounded-full bg-stone px-5 py-2.5 text-sm font-medium text-ink transition-transform active:scale-[0.98]"
+            className="mt-8 inline-block rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-dado transition-transform active:scale-[0.98]"
           >
             Open {BOT_HANDLE}
           </a>
@@ -97,7 +97,7 @@ export function Try() {
         <ol className="grid min-w-0 gap-7">
           {TRY.map((s, i) => (
             <li key={s.title} className="grid min-w-0 grid-cols-[2rem_1fr] gap-x-3">
-              <span className="font-display text-xl leading-none text-stone/60">{i + 1}</span>
+              <span className="font-display text-xl leading-none text-ink-3">{i + 1}</span>
               <div className="min-w-0">
                 <p className="font-medium">{s.title}</p>
                 {s.command ? (
@@ -105,7 +105,7 @@ export function Try() {
                     <CopyCommand command={s.command} dark />
                   </div>
                 ) : (
-                  <p className="mt-1 text-[0.95rem] text-stone/80">{s.text}</p>
+                  <p className="mt-1 text-[0.95rem] text-ink-2">{s.text}</p>
                 )}
               </div>
             </li>
@@ -118,16 +118,16 @@ export function Try() {
 
 export function Footer() {
   return (
-    <footer className="bg-ink text-stone/70">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 border-t border-stone/15 px-4 py-8 text-sm sm:px-6">
+    <footer className="bg-dado text-ink-3">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 border-t border-ink/15 px-4 py-8 text-sm sm:px-6">
         <p>
-          <span lang="la" className="font-display text-base text-stone">Dictum, factum.</span> Said, and done.
+          <span lang="la" className="font-display text-base text-ink">Dictum, factum.</span> Said, and done.
         </p>
         <p>Built for Heads Up by Even Realities, TVM Ventures and Daos Hub</p>
         <nav aria-label="Footer" className="flex gap-5">
-          <a className="hover:text-stone" href={REPO_URL}>Source</a>
-          <a className="hover:text-stone" href={`${REPO_URL}/blob/master/JUDGES.md`}>For judges</a>
-          <a className="hover:text-stone" href="/llms.txt">llms.txt</a>
+          <a className="hover:text-ink" href={REPO_URL}>Source</a>
+          <a className="hover:text-ink" href={`${REPO_URL}/blob/master/JUDGES.md`}>For judges</a>
+          <a className="hover:text-ink" href="/llms.txt">llms.txt</a>
         </nav>
       </div>
     </footer>

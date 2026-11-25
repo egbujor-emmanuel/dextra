@@ -1,26 +1,24 @@
 # DEXTRA
 
-> An Even G2 smart-glasses app plus a Telegram business bot. Agree something out loud; the glasses turn it into a short note that the other person confirms in their own Telegram chat; then both people tick items off and get due-date reminders. Built for "Heads Up: Even Realities Hackathon" (Even Realities × TVM Ventures × Daos Hub), tracks 01 Messaging & News and 04 AI Assistants & Work.
+> An Even G2 smart-glasses app plus a Telegram business bot. Agree something out loud; the glasses turn it into a short note that the other person confirms in their own Telegram chat; then both people tick items off and get due-date reminders. Built for "Heads Up: Even Realities Hackathon" (Even Realities, TVM Ventures, Daos Hub), tracks 01 Messaging & News and 04 AI Assistants & Work.
+
+How it works: the phone keeps the last 45 s of glasses-mic audio in memory only. Holding the temple sends it to the server, which transcribes it (Deepgram), works out who said each line (voice separation, then voice pitch, then an LLM turn guess), and asks an LLM (free Groq tier, gpt-oss-120b) to propose commitments, each with a verbatim quote. Deterministic code keeps a commitment only if its quote is in what that speaker said, any amount was spoken, and it carries no links; repeats are merged. One tap sends it as the wearer into the Telegram chat with the other person. They confirm or change it; confirmed records get a SHA-256 fingerprint. Both get tap-when-done buttons (or a shared Telegram checklist when the wearer has Premium) and reminders the day before, on the day, and when overdue.
 
 ## Try it
-- Bot: https://t.me/DextraAgreeBot
-- Live server health: https://dextra-qfz7.onrender.com/health
-- No glasses or API keys needed: `git clone https://github.com/egbujor-emmanuel/dextra && cd dextra && npm install && npm run try` (official Even simulator against the live server)
 
-## How it works
-1. The phone keeps the last 45 s of glasses-mic audio in memory only.
-2. Hold to lock: the server transcribes (Deepgram), works out who said each line (voice separation → voice pitch → LLM turn guess), and an LLM (free Groq tier, gpt-oss-120b) proposes commitments, each with a verbatim quote.
-3. Deterministic code keeps a commitment only if its quote is in what that speaker said, any amount was spoken, and it has no links; repeats are merged.
-4. One tap sends it as the wearer into the Telegram chat with the other person (business connection).
-5. The other person confirms or changes it. Confirmed records get a SHA-256 fingerprint.
-6. Both get tap-when-done buttons (or a shared Telegram checklist when the wearer has Premium) and reminders the day before, on the day, and when overdue.
-
-## Proof
-- 112 automated tests (core, glasses, server); typecheck clean
-- Extraction eval: 12 conversations, 17 commitments, precision 1.00, recall 0.94, 0 invented commitments reached the lens
-- 29 safety invariants, each mapped to a test: THREAT_MODEL.md
-- Verified live with two real Telegram accounts: pair → lock → send → confirm → tick → fulfilled
+- [@DextraAgreeBot](https://t.me/DextraAgreeBot): the live Telegram bot
+- [Live server health](https://dextra-qfz7.onrender.com/health): returns {"ok":true} when the server is up (the free plan may take up to a minute to wake)
+- [Source and setup](https://github.com/egbujor-emmanuel/dextra): `npm install && npm run try` runs the official Even simulator against the live server, no API keys needed
 
 ## Docs
-- README: https://github.com/egbujor-emmanuel/dextra#readme
-- Judges' 5-minute path: https://github.com/egbujor-emmanuel/dextra/blob/master/JUDGES.md
+
+- [README](https://github.com/egbujor-emmanuel/dextra#readme): judge path first, architecture, privacy
+- [Judges' five-minute path](https://github.com/egbujor-emmanuel/dextra/blob/master/JUDGES.md): from clone to a confirmed record
+- [Threat model](https://github.com/egbujor-emmanuel/dextra/blob/master/THREAT_MODEL.md): 29 safety invariants, each mapped to the test that proves it
+- [Reproduce](https://github.com/egbujor-emmanuel/dextra/blob/master/REPRODUCE.md): clean-clone build, test, deploy and eval steps
+
+## Proof
+
+- [Extraction eval result](https://github.com/egbujor-emmanuel/dextra/blob/master/evidence/eval-commitments.json): 12 conversations, 17 commitments, precision 1.00, recall 0.94, 0 invented commitments reached the lens
+- 112 automated tests across the glasses app, server and shared core; typecheck clean
+- Verified live on 24 Nov 2026 with two real Telegram accounts: pair, lock, send, confirm, tick, fulfilled

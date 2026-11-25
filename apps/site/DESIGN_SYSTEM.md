@@ -10,14 +10,18 @@ A spoken promise becomes a record both people keep. Roman law had exactly this: 
 
 ## Tokens
 
+Flat colour only: no grain, noise or texture overlays anywhere (rejected as overused, 2026-11-25). The ground is a Pompeian fresco wall: the Caecilius Iucundus wax tablets that recorded payments and agreements were found in Pompeii.
+
 | Name | Hex | Role |
 |---|---|---|
-| Travertine | `#D8D3C7` | Page ground: cool stone, not cream |
-| Iron gall | `#1E1B18` | Body text and rules on stone |
-| Wax | `#2B2119` | Tablet surfaces (dark beeswax) |
-| Stylus | `#D9B98C` | Text cut into wax (the wood showing through) |
-| Seal | `#8C2F1C` | The fingerprint seal, and refusals |
-| Lens | `#5CFF9D` | **Only** inside the G2 lens. Never on stone or wax |
+| Pompeian red (`stone`) | `#8F2A22` | Page ground: a flat fresco wall |
+| Deep red (`stone-2`) | `#7A221C` | Panels and bands on the wall |
+| Lime plaster (`ink`) | `#F3E9D6` | Text on the wall (6.9:1) |
+| Plaster shades (`ink-2`, `ink-3`) | `#EAD9BD`, `#E0C9A6` | Secondary text (6.0:1 and 5.2:1 minimum) |
+| Fresco black (`dado`) | `#1A1413` | The lower band (try section, footer) and refusals |
+| Wax / stylus | `#2B2119` / `#D9B98C` | Tablet surface and the letters cut into it |
+| Seal | `#8C2F1C` | The fingerprint seal, only on wax |
+| Lens | `#5CFF9D` | **Only** inside the G2 lens |
 
 ## Type
 
@@ -47,7 +51,7 @@ A spoken promise becomes a record both people keep. Roman law had exactly this: 
  Try it with two Telegram accounts
 ```
 
-Content is left-aligned. The two tablets are the one bold element. Everything around them stays quiet: stone, ink, thin rules only where they separate real content.
+Content is left-aligned. The red wall and the two tablets are the one bold statement. Everything else stays quiet: plaster text, thin rules only where they separate real content.
 
 ## Principles
 
@@ -55,5 +59,5 @@ Content is left-aligned. The two tablets are the one bold element. Everything ar
 2. **One orchestrated moment.** The tablets fill in once on load: lines are incised, the lens shows the card, the seal is pressed. No fade-up on every section; no hover effects on every card.
 3. **Motion answers actions.** The validator reacts as you type; buttons press.
 4. **Words do one job each.** Plain verbs, sentence case, active voice. A button says what happens.
-5. **Avoid the generated-page tells:** near-black with one acid accent, cream with a terracotta accent, card grids with one radius and one soft shadow, middle-dot meta strings, "→" appended to links, mono labels.
+5. **Avoid the generated-page tells:** near-black with one acid accent, cream with a terracotta accent, grey grain backgrounds, card grids with one radius and one soft shadow, middle-dot meta strings, "→" appended to links, mono labels.
 6. **Quality floor without announcing it:** works at 320 px, visible focus, reduced motion gets the final state with no animation, contrast ≥ 4.5:1 for text.

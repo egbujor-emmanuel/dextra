@@ -1,9 +1,6 @@
+import './zod-jitless'
 import { validateProposal } from '@dextra/core/validate'
 import { useMemo, useState } from 'react'
-import { z } from 'zod'
-
-// The site's CSP forbids eval; tell zod not to probe for it (it would fall back anyway, but logs a violation).
-z.config({ jitless: true })
 
 /** The transcript from apps/server/test/service.test.ts. Speaker 0 is you (the wearer), 1 is them. */
 const TRANSCRIPT = [
@@ -104,8 +101,8 @@ export default function Gate() {
             </div>
           </div>
 
-          <div role="status" aria-live="polite" className={`border-t px-5 py-5 ${verdict.kept ? 'border-ink/20' : 'border-seal/40 bg-seal/[0.07]'}`}>
-            <p className={`text-[1.05rem] ${verdict.kept ? '' : 'text-seal line-through decoration-2'}`}>
+          <div role="status" aria-live="polite" className={`border-t px-5 py-5 ${verdict.kept ? 'border-ink/20 bg-ink/[0.06]' : 'border-dado bg-dado rounded-b-[13px]'}`}>
+            <p className={`text-[1.05rem] ${verdict.kept ? '' : 'line-through decoration-ink/70 decoration-2'}`}>
               {owner} will {draft.what || '…'}
               {draft.amount && ` (${draft.amount})`}
             </p>
