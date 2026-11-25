@@ -1,7 +1,32 @@
+import { useRef } from 'react'
 import { BOT_HANDLE, BOT_URL, EVAL, INVARIANTS, REPO_URL, TESTS } from '../../lib/content'
+import { gsap, prefersReducedMotion, useGSAP } from '../../lib/motion'
+import { RecordDeck } from '../records/RecordDeck'
+import { BrutalLink } from '../ui/BrutalButton'
 import { CopyCommand } from '../ui/CopyCommand'
 
-/** A real sequence, so numbering is meaningful here (DESIGN_SYSTEM.md). */
+/** Records: the three real records as a deck (21st kinetic deck, ported to GSAP). */
+export function Records() {
+  return (
+    <section id="records" aria-labelledby="records-heading" className="border-y-[3px] border-black bg-blue-soft">
+      <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-[var(--space-section)] sm:px-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <h2 id="records-heading" className="text-[clamp(1.9rem,1.3rem+1.8vw,2.8rem)] font-extrabold leading-[1.05] tracking-[-0.02em]">
+            One record, agreed by both people.
+          </h2>
+          <p className="mt-4 max-w-[46ch] text-ink-2">
+            Not a note only you can see, and not a transcript of everything said. Just what was promised, by whom, and the
+            moment the other person agreed, sealed with a SHA-256 of what was agreed. Then you both tick it off, and
+            whoever owes it gets a reminder the day before.
+          </p>
+        </div>
+        <RecordDeck />
+      </div>
+    </section>
+  )
+}
+
+/** A real sequence, so numbering is meaningful. */
 const STEPS = [
   { title: 'Listen', text: 'The phone keeps the last 45 seconds the glasses hear, in memory only.' },
   { title: 'Lock', text: 'Hold the temple. Who promised what appears on the lens, backed by their words.' },
@@ -11,59 +36,73 @@ const STEPS = [
 ]
 
 export function Steps() {
+  const root = useRef<HTMLElement>(null)
+  useGSAP(
+    () => {
+      if (prefersReducedMotion()) return
+      // Stagger List preset from the design system, triggered once when the steps scroll into view.
+      gsap.from('.step', {
+        opacity: 0,
+        scale: 0.92,
+        y: 16,
+        duration: 0.4,
+        stagger: { each: 0.06, from: 'start' },
+        ease: 'back.out(1.4)',
+        scrollTrigger: { trigger: root.current, start: 'top 75%', once: true },
+      })
+    },
+    { scope: root },
+  )
   return (
-    <section id="how" aria-labelledby="how-heading" className="border-y border-ink/20 bg-stone-2/50">
-      <div className="mx-auto max-w-7xl px-4 py-[var(--space-section)] sm:px-6">
-        <h2 id="how-heading" className="font-display text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)]">From a spoken promise to a kept one</h2>
-        <ol className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-5 lg:gap-0">
-          {STEPS.map((s, i) => (
-            <li key={s.title} className="relative lg:border-l lg:border-ink/20 lg:px-5 lg:first:border-l-0 lg:first:pl-0">
-              <p className="font-display text-[1.6rem] leading-none text-ink-3">{i + 1}</p>
-              <h3 className="mt-3 font-medium">{s.title}</h3>
-              <p className="mt-1.5 max-w-[30ch] text-[0.95rem] text-ink-2">{s.text}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
+    <section ref={root} id="how" aria-labelledby="how-heading" className="mx-auto max-w-7xl px-4 py-[var(--space-section)] sm:px-6">
+      <h2 id="how-heading" className="text-[clamp(1.9rem,1.3rem+1.8vw,2.8rem)] font-extrabold leading-[1.05] tracking-[-0.02em]">
+        From a spoken promise to a kept one.
+      </h2>
+      <ol className="brut-shadow mt-10 grid bg-paper sm:grid-cols-2 lg:grid-cols-5">
+        {STEPS.map((s, i) => (
+          <li key={s.title} className="step border-b-[3px] border-black p-6 last:border-b-0 sm:odd:border-r-[3px] lg:border-b-0 lg:border-r-[3px] lg:last:border-r-0">
+            <p className={`grid size-11 place-items-center border-[3px] border-black font-display text-[1.25rem] font-extrabold ${i === 0 ? 'bg-red text-white' : 'bg-paper'}`}>{i + 1}</p>
+            <h3 className="mt-4 text-[1.2rem] font-extrabold">{s.title}</h3>
+            <p className="mt-1.5 text-ink-2">{s.text}</p>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
 
 export function Proof() {
+  const stats = [
+    { value: String(TESTS), label: 'automated tests pass across the glasses app, the server and the shared core' },
+    { value: EVAL.precision, label: `precision on ${EVAL.cases} labelled conversations (${EVAL.commitments} commitments), free ${EVAL.model} model` },
+    { value: EVAL.recall, label: 'recall on the same eval' },
+    { value: String(EVAL.inventedPassed), label: 'invented commitments got past the gate' },
+  ]
   return (
-    <section aria-labelledby="proof-heading" className="mx-auto max-w-7xl px-4 py-[var(--space-section)] sm:px-6">
-      <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr]">
-        <h2 id="proof-heading" className="font-display text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] leading-tight">What we measured</h2>
-        <div className="grid max-w-[68ch] gap-6 text-[1.05rem] leading-relaxed">
-          <p>
-            <strong className="font-display text-[1.9rem] font-normal">{TESTS}</strong> automated tests pass across the glasses
-            app, the server and the shared core.
-          </p>
-          <p>
-            On {EVAL.cases} labelled conversations holding {EVAL.commitments} commitments, the free {EVAL.model} model scored{' '}
-            <strong className="font-display text-[1.9rem] font-normal">{EVAL.precision}</strong> precision and{' '}
-            <strong className="font-display text-[1.9rem] font-normal">{EVAL.recall}</strong> recall, and{' '}
-            <strong className="font-display text-[1.9rem] font-normal">{EVAL.inventedPassed}</strong> invented commitments got past
-            the gate.
-          </p>
-          <p>
-            <strong className="font-display text-[1.9rem] font-normal">{INVARIANTS}</strong> safety rules each point to the test
-            that proves them, in the{' '}
-            <a className="underline decoration-ink/40 underline-offset-4 hover:decoration-ink" href={`${REPO_URL}/blob/master/THREAT_MODEL.md`}>
-              threat model
-            </a>
-            .
-          </p>
-          <p className="text-[0.95rem] text-ink-2">
-            On 24 Nov the whole path ran live with two real Telegram accounts: pair, lock, send, confirm, tick, fulfilled.
-            Judges can follow the{' '}
-            <a className="underline decoration-ink/40 underline-offset-4 hover:decoration-ink" href={`${REPO_URL}/blob/master/JUDGES.md`}>
-              five-minute path
-            </a>
-            .
-          </p>
-        </div>
-      </div>
+    <section aria-labelledby="proof-heading" className="mx-auto max-w-7xl px-4 pb-[var(--space-section)] sm:px-6">
+      <h2 id="proof-heading" className="text-[clamp(1.9rem,1.3rem+1.8vw,2.8rem)] font-extrabold leading-[1.05] tracking-[-0.02em]">
+        What we measured.
+      </h2>
+      <dl className="brut-shadow mt-10 grid bg-paper sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s, i) => (
+          <div key={s.label} className="flex flex-col-reverse justify-end border-b-[3px] border-black p-6 last:border-b-0 sm:odd:border-r-[3px] lg:border-b-0 lg:border-r-[3px] lg:last:border-r-0">
+            <dt className="mt-3 text-ink-2">{s.label}</dt>
+            <dd className={`font-display text-[3.2rem] font-extrabold leading-none ${i === 3 ? 'text-red' : ''}`}>{s.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-6 max-w-[70ch] text-ink-2">
+        {INVARIANTS} safety rules each point to the test that proves them, in the{' '}
+        <a className="font-semibold underline decoration-red decoration-2 underline-offset-4" href={`${REPO_URL}/blob/master/THREAT_MODEL.md`}>
+          threat model
+        </a>
+        . On 24 Nov the whole path ran live with two real Telegram accounts: pair, lock, send, confirm, tick, fulfilled. Judges
+        can follow the{' '}
+        <a className="font-semibold underline decoration-red decoration-2 underline-offset-4" href={`${REPO_URL}/blob/master/JUDGES.md`}>
+          five-minute path
+        </a>
+        .
+      </p>
     </section>
   )
 }
@@ -77,35 +116,32 @@ const TRY = [
 
 export function Try() {
   return (
-    <section id="try" aria-labelledby="try-heading" className="bg-dado text-ink">
+    <section id="try" aria-labelledby="try-heading" className="border-t-[3px] border-black bg-red text-white">
       <div className="mx-auto grid max-w-7xl gap-12 px-4 py-[var(--space-section)] sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <h2 id="try-heading" className="font-display text-[clamp(1.6rem,1.2rem+1.2vw,2.2rem)] leading-tight">Try it with two Telegram accounts</h2>
-          <p className="mt-4 max-w-[42ch] text-ink-2">
-            No glasses and no API keys. The official Even simulator runs the real app against the live server, and your
-            second account plays the other person.
+          <h2 id="try-heading" className="text-[clamp(1.9rem,1.3rem+1.8vw,2.8rem)] font-extrabold leading-[1.05] tracking-[-0.02em]">
+            Try it with two Telegram accounts.
+          </h2>
+          <p className="mt-4 max-w-[42ch] text-white">
+            No glasses and no API keys. The official Even simulator runs the real app against the live server, and your second
+            account plays the other person.
           </p>
-          <a
-            href={BOT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-8 inline-flex min-h-11 items-center rounded-full bg-ink px-5 text-sm font-medium text-dado transition-transform active:scale-[0.98]"
-          >
+          <BrutalLink tone="paper" className="mt-8" href={BOT_URL} target="_blank" rel="noopener noreferrer">
             Open {BOT_HANDLE}
-          </a>
+          </BrutalLink>
         </div>
-        <ol className="grid min-w-0 gap-7">
+        <ol className="grid min-w-0 gap-4">
           {TRY.map((s, i) => (
-            <li key={s.title} className="grid min-w-0 grid-cols-[2rem_1fr] gap-x-3">
-              <span className="font-display text-xl leading-none text-ink-3">{i + 1}</span>
+            <li key={s.title} className="brut grid min-w-0 grid-cols-[2.75rem_1fr] gap-x-4 bg-paper p-4 text-ink">
+              <span className="grid size-11 place-items-center border-[3px] border-black font-display text-[1.15rem] font-extrabold">{i + 1}</span>
               <div className="min-w-0">
-                <p className="font-medium">{s.title}</p>
+                <p className="font-display font-bold">{s.title}</p>
                 {s.command ? (
                   <div className="mt-2">
-                    <CopyCommand command={s.command} dark />
+                    <CopyCommand command={s.command} />
                   </div>
                 ) : (
-                  <p className="mt-1 text-[0.95rem] text-ink-2">{s.text}</p>
+                  <p className="mt-1 text-ink-2">{s.text}</p>
                 )}
               </div>
             </li>
@@ -118,16 +154,22 @@ export function Try() {
 
 export function Footer() {
   return (
-    <footer className="bg-dado text-ink-3">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 border-t border-ink/15 px-4 py-8 text-sm sm:px-6">
-        <p>
-          <span lang="la" className="font-display text-base text-ink">Dictum, factum.</span> Said, and done.
+    <footer className="border-t-[3px] border-black bg-ink text-white">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+        <p className="font-display font-bold">
+          DEXTRA <span lang="la" className="ml-2 font-sans font-normal">Dictum, factum. Said, and done.</span>
         </p>
         <p>Built for Heads Up by Even Realities, TVM Ventures and Daos Hub</p>
         <nav aria-label="Footer" className="flex gap-2">
-          <a className="inline-flex min-h-11 items-center px-2 hover:text-ink" href={REPO_URL}>Source</a>
-          <a className="inline-flex min-h-11 items-center px-2 hover:text-ink" href={`${REPO_URL}/blob/master/JUDGES.md`}>For judges</a>
-          <a className="inline-flex min-h-11 items-center px-2 hover:text-ink" href="/llms.txt">llms.txt</a>
+          {[
+            { href: REPO_URL, label: 'Source' },
+            { href: `${REPO_URL}/blob/master/JUDGES.md`, label: 'For judges' },
+            { href: '/llms.txt', label: 'llms.txt' },
+          ].map(l => (
+            <a key={l.label} className="inline-flex min-h-11 items-center px-2 font-semibold hover:underline" href={l.href}>
+              {l.label}
+            </a>
+          ))}
         </nav>
       </div>
     </footer>

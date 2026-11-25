@@ -20,6 +20,8 @@ type Props = {
   /** Show one fixed frame; otherwise the real captures cycle. */
   frame?: number
   className?: string
+  /** Caption colours for a dark surround. */
+  dark?: boolean
 }
 
 function PlainFrame({ src }: { src: string }) {
@@ -30,7 +32,7 @@ function PlainFrame({ src }: { src: string }) {
  * The G2 waveguide as a WebGL lens: a real simulator capture seen through a slight barrel warp and faint colour
  * fringing. Falls back to the plain capture without WebGL or with reduced motion.
  */
-export function LensDisplay({ frame, className = '' }: Props) {
+export function LensDisplay({ frame, className = '', dark = false }: Props) {
   const [index, setIndex] = useState(frame ?? 0)
   const glass = useRef<HTMLDivElement>(null)
   const useShader = useMemo(() => webglAvailable() && !prefersReducedMotion(), [])
@@ -50,7 +52,7 @@ export function LensDisplay({ frame, className = '' }: Props) {
 
   return (
     <figure className={`relative ${className}`}>
-      <div className="relative aspect-[2/1] overflow-hidden rounded-[28px] border border-black/60 bg-glass p-[3%] shadow-[0_30px_60px_-30px_rgb(30_27_24/0.6),inset_0_1px_0_rgb(255_255_255/0.06)]">
+      <div className="relative aspect-[2/1] overflow-hidden rounded-[18px] border-[3px] border-black bg-glass p-[3%] outline outline-2 outline-white/15">
         <div ref={glass} className="relative h-full w-full [filter:brightness(1.25)_drop-shadow(0_0_8px_rgb(92_255_157/0.35))]">
           {useShader ? (
             <Suspense fallback={<PlainFrame src={current.src} />}>
@@ -67,7 +69,7 @@ export function LensDisplay({ frame, className = '' }: Props) {
                 focusEdges={1}
                 swirl={0}
                 lensBulge={0.06}
-                grainOverlay={0.06}
+                grainOverlay={0}
                 style={{ width: '100%', height: '100%' }}
                 aria-hidden
               />
@@ -77,13 +79,11 @@ export function LensDisplay({ frame, className = '' }: Props) {
           )}
         </div>
         <div className="scanlines pointer-events-none absolute inset-0 opacity-30" aria-hidden />
-        {/* Glass reflection along the top edge of the lens. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[0.035] via-white/[0.01] to-transparent" aria-hidden />
       </div>
-      <figcaption className="mt-3 flex items-center gap-2 text-xs text-ink-3">
-        <span className="inline-block size-1.5 rounded-full bg-ink-3" aria-hidden />
+      <figcaption className={`mt-3 flex items-center gap-2 text-[0.9rem] ${dark ? 'text-white' : 'text-ink-3'}`}>
+        <span className={`inline-block size-2 ${dark ? 'bg-white' : 'bg-ink-3'}`} aria-hidden />
         <span>
-          The G2 lens, captured from the Even simulator: <span className="text-ink">{current.label.toLowerCase()}</span>
+          The G2 lens, captured from the Even simulator: <span className="font-semibold">{current.label.toLowerCase()}</span>
         </span>
       </figcaption>
       <span className="sr-only">The glasses display shows: {current.label}.</span>

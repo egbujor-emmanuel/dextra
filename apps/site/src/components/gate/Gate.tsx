@@ -1,6 +1,7 @@
 import './zod-jitless'
 import { validateProposal } from '@dextra/core/validate'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { gsap, prefersReducedMotion, useGSAP } from '../../lib/motion'
 
 /** The transcript from apps/server/test/service.test.ts. Speaker 0 is you (the wearer), 1 is them. */
 const TRANSCRIPT = [
@@ -21,9 +22,10 @@ const PRESETS: { label: string; why: string; draft: Draft }[] = [
 
 /**
  * DEXTRA's real gate (packages/core/src/validate.ts) running in this page on the real test transcript. The AI only
- * proposes; this code decides.
+ * proposes; this code decides. The verdict lands as a stamp.
  */
 export default function Gate() {
+  const root = useRef<HTMLDivElement>(null)
   const [draft, setDraft] = useState<Draft>(PRESETS[1]!.draft)
   const [active, setActive] = useState(1)
 
@@ -33,6 +35,15 @@ export default function Gate() {
     return r.commitments.length > 0 ? { kept: true, code: 'KEPT' } : { kept: false, code: r.dropped[0]?.code ?? r.refusal ?? 'REFUSED' }
   }, [draft])
 
+  // The stamp answers the visitor's action (motion that shows what changed).
+  useGSAP(
+    () => {
+      if (prefersReducedMotion()) return
+      gsap.fromTo('.stamp', { scale: 1.6, rotation: -24, opacity: 0 }, { scale: 1, rotation: -8, opacity: 1, duration: 0.35, ease: 'back.out(2)' })
+    },
+    { scope: root, dependencies: [verdict.kept, verdict.code, draft.what] },
+  )
+
   const update = (patch: Partial<Draft>) => {
     setDraft(d => ({ ...d, ...patch }))
     setActive(-1)
@@ -41,17 +52,17 @@ export default function Gate() {
 
   return (
     <section id="gate" aria-labelledby="gate-heading" className="mx-auto max-w-7xl px-4 py-[var(--space-section)] sm:px-6">
-      <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+      <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <h2 id="gate-heading" className="font-display text-[clamp(1.8rem,1.3rem+1.5vw,2.6rem)] leading-[1.1]">
+          <h2 id="gate-heading" className="text-[clamp(1.9rem,1.3rem+1.8vw,2.8rem)] font-extrabold leading-[1.05] tracking-[-0.02em]">
             Try to slip a promise past it.
           </h2>
           <p className="mt-4 max-w-[46ch] text-ink-2">
-            An AI listening to a conversation can invent an obligation. In DEXTRA the AI only proposes. The panel on the
-            right runs the same check the server runs: the quote has to be in what that person actually said, any amount
-            has to have been spoken, and nothing can carry a link. Then the other person still has to confirm.
+            An AI listening to a conversation can invent an obligation. In DEXTRA the AI only proposes. This panel runs the
+            same check the server runs: the quote has to be in what that person said, any amount has to have been spoken,
+            and nothing can carry a link. Then the other person still has to confirm.
           </p>
-          <div className="mt-7 flex flex-wrap gap-2" role="group" aria-label="Examples to try">
+          <div className="mt-7 flex flex-wrap gap-3" role="group" aria-label="Examples to try">
             {PRESETS.map((p, i) => (
               <button
                 key={p.label}
@@ -61,7 +72,7 @@ export default function Gate() {
                   setActive(i)
                 }}
                 aria-pressed={active === i}
-                className={`min-h-11 rounded-full border px-4 text-[0.85rem] transition-colors ${active === i ? 'border-ink bg-ink text-stone' : 'border-ink/30 hover:border-ink'}`}
+                className={`min-h-11 border-[3px] border-black px-4 font-display text-[0.9rem] font-bold transition-[transform,box-shadow] duration-150 ${active === i ? 'translate-x-1 translate-y-1 bg-ink text-white shadow-none' : 'bg-paper shadow-[4px_4px_0_#000] hover:-translate-y-0.5'}`}
               >
                 {p.label}
               </button>
@@ -69,13 +80,13 @@ export default function Gate() {
           </div>
         </div>
 
-        <div className="rounded-[14px] border border-ink/25 bg-stone-2/60">
-          <div className="border-b border-ink/15 px-5 py-4">
-            <p className="text-[0.85rem] text-ink-3">The conversation, from DEXTRA’s test suite</p>
+        <div ref={root} className="brut-shadow relative bg-paper">
+          <div className="border-b-[3px] border-black bg-blue-soft px-5 py-4">
+            <p className="font-display text-[0.95rem] font-bold">The conversation, from DEXTRA’s test suite</p>
             <ul className="mt-3 grid gap-1.5">
               {TRANSCRIPT.map(t => (
                 <li key={t.text} className="grid grid-cols-[3.5rem_1fr]">
-                  <span className="text-ink-3">{t.speaker === 0 ? 'You' : 'Them'}</span>
+                  <span className="font-semibold text-ink-3">{t.speaker === 0 ? 'You' : 'Them'}</span>
                   <span>{t.text}</span>
                 </li>
               ))}
@@ -83,12 +94,18 @@ export default function Gate() {
           </div>
 
           <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
-            <p className="text-[0.85rem] text-ink-3 sm:col-span-2">What the AI proposed. Change any of it.</p>
+            <p className="font-display text-[0.95rem] font-bold sm:col-span-2">What the AI proposed. Change any of it.</p>
             <fieldset className="sm:col-span-2">
-              <legend className="mb-1.5 text-[0.85rem]">Who owes it</legend>
-              <div className="flex gap-2">
+              <legend className="mb-1.5 text-[0.95rem] font-semibold">Who owes it</legend>
+              <div className="flex gap-3">
                 {([0, 1] as const).map(s => (
-                  <button key={s} type="button" onClick={() => update({ speaker: s })} aria-pressed={draft.speaker === s} className={`min-h-11 min-w-16 rounded-lg border px-4 text-sm ${draft.speaker === s ? 'border-ink bg-ink text-stone' : 'border-ink/30'}`}>
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => update({ speaker: s })}
+                    aria-pressed={draft.speaker === s}
+                    className={`min-h-11 min-w-20 border-[3px] border-black px-4 font-display font-bold ${draft.speaker === s ? 'bg-ink text-white' : 'bg-paper'}`}
+                  >
                     {s === 0 ? 'You' : 'Them'}
                   </button>
                 ))}
@@ -101,16 +118,20 @@ export default function Gate() {
             </div>
           </div>
 
-          <div role="status" aria-live="polite" className={`border-t px-5 py-5 ${verdict.kept ? 'border-ink/20 bg-ink/[0.06]' : 'border-dado bg-dado rounded-b-[13px]'}`}>
-            <p className={`text-[1.05rem] ${verdict.kept ? '' : 'line-through decoration-ink/70 decoration-2'}`}>
+          <div role="status" aria-live="polite" className={`relative min-h-[8.5rem] border-t-[3px] border-black px-5 py-5 ${verdict.kept ? 'bg-blue-soft' : 'bg-red-soft'}`}>
+            <p className={`max-w-[68%] font-display text-[1.15rem] font-bold ${verdict.kept ? '' : 'line-through decoration-red decoration-[3px]'}`}>
               {owner} will {draft.what || '…'}
               {draft.amount && ` (${draft.amount})`}
             </p>
-            <p className="mt-1 text-sm">
-              {verdict.kept ? 'Reaches the lens for you to send.' : 'Dropped before it reaches the lens.'}{' '}
-              <code className="font-mono text-[0.8rem] text-ink-3">{verdict.code}</code>
-            </p>
-            {active >= 0 && <p className="mt-1 text-sm text-ink-2">{PRESETS[active]!.why}</p>}
+            <p className="mt-1 max-w-[68%]">{verdict.kept ? 'Reaches the lens for you to send.' : 'Dropped before it reaches the lens.'}</p>
+            {active >= 0 && <p className="mt-1 max-w-[68%] text-ink-2">{PRESETS[active]!.why}</p>}
+            <div
+              className={`stamp absolute bottom-5 right-5 border-[3px] bg-paper px-3 py-1.5 text-center font-display font-extrabold uppercase ${verdict.kept ? 'border-blue text-blue' : 'border-red text-red'}`}
+              style={{ transform: 'rotate(-8deg)' }}
+            >
+              <span className="block text-[1.25rem] leading-none">{verdict.kept ? 'Kept' : 'Refused'}</span>
+              {!verdict.kept && <span className="mt-1 block font-mono text-[0.75rem] font-normal normal-case">{verdict.code}</span>}
+            </div>
           </div>
         </div>
       </div>
@@ -121,12 +142,12 @@ export default function Gate() {
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-[0.85rem]">{label}</span>
+      <span className="text-[0.95rem] font-semibold">{label}</span>
       <input
         value={value}
         onChange={e => onChange(e.target.value)}
         maxLength={120}
-        className="min-h-11 rounded-lg border border-ink/30 bg-stone px-3 py-2 outline-none transition-colors focus:border-ink"
+        className="min-h-11 border-[3px] border-black bg-paper px-3 py-2 outline-none focus:shadow-[4px_4px_0_var(--color-blue)]"
       />
     </label>
   )
