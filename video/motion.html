@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DEXTRA motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root { --ink: #0f172a; --red: #dc2626; --red-soft: #fcf1f1; --blue: #2563eb; --blue-soft: #e8efff; --lens: #45ff8c; }
+  * { box-sizing: border-box; margin: 0; }
+  body { visibility: hidden; }
+  html, body { width: 1600px; height: 900px; overflow: hidden; background: #fff; color: var(--ink); font-family: 'Source Sans 3', system-ui, sans-serif; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .brut { border: 4px solid #000; box-shadow: 10px 10px 0 #000; background: #fff; }
+  h1, h2, .display { font-family: Lexend, system-ui, sans-serif; font-weight: 800; letter-spacing: -0.03em; }
+  /* problem */
+  #problem .bubble { position: absolute; padding: 22px 30px; font-size: 40px; font-weight: 600; border-radius: 0; }
+  #problem .b1 { left: 140px; top: 150px; background: var(--blue-soft); }
+  #problem .b2 { right: 160px; top: 300px; background: var(--red-soft); }
+  #problem .b3 { left: 260px; top: 470px; background: var(--blue-soft); }
+  #problem .strike { position: absolute; height: 8px; background: var(--red); transform-origin: left center; transform: scaleX(0); }
+  #problem .verdict { position: absolute; left: 0; right: 0; bottom: 110px; text-align: center; font-size: 76px; }
+  #problem .verdict span { color: var(--red); }
+  /* solution */
+  #solution .lens { position: absolute; left: 120px; top: 230px; width: 620px; height: 330px; background: #050806; border: 4px solid #000; box-shadow: 10px 10px 0 #000; border-radius: 26px; padding: 34px 40px; color: var(--lens); font-size: 34px; line-height: 1.5; font-family: 'Source Sans 3', sans-serif; }
+  #solution .lens .dim { opacity: .55; font-size: 28px; }
+  #solution .arrow { position: absolute; left: 780px; top: 370px; font-family: Lexend; font-weight: 800; font-size: 90px; color: var(--ink); }
+  #solution .tg { position: absolute; right: 120px; top: 210px; width: 600px; padding: 30px 34px; background: var(--blue-soft); font-size: 30px; line-height: 1.45; }
+  #solution .tg b { font-family: Lexend; }
+  #solution .stamp { position: absolute; right: 150px; top: 520px; padding: 14px 26px; border: 6px solid var(--red); color: var(--red); font-family: Lexend; font-weight: 800; font-size: 46px; transform: rotate(-6deg) scale(0); background: #fff; }
+  #solution .title { position: absolute; left: 0; right: 0; top: 70px; text-align: center; font-size: 64px; }
+  #solution .title span { color: var(--red); }
+  #solution .tagline { position: absolute; left: 0; right: 0; bottom: 90px; text-align: center; font-size: 40px; font-weight: 600; }
+  /* step card */
+  .step { place-items: center; }
+  .step .card { display: flex; align-items: center; gap: 48px; padding: 56px 80px; }
+  .step .num { width: 170px; height: 170px; display: grid; place-items: center; background: var(--red); color: #fff; border: 4px solid #000; font-family: Lexend; font-weight: 800; font-size: 110px; }
+  .step .kicker { font-family: Lexend; font-weight: 700; font-size: 34px; color: var(--blue); }
+  .step h2 { font-size: 84px; line-height: 1; margin-top: 8px; }
+  .step .sub { font-size: 32px; margin-top: 14px; color: #334155; }
+  /* outro */
+  #outro { display: none; }
+  #outro .wrap { position: absolute; inset: 0; display: grid; place-items: center; }
+  #outro .card { display: flex; align-items: center; gap: 64px; padding: 64px 86px; }
+  #outro img { width: 250px; height: 250px; image-rendering: pixelated; }
+  #outro h1 { font-size: 132px; line-height: 1; }
+  #outro .motto { font-size: 46px; margin-top: 14px; }
+  #outro .motto i { font-weight: 700; }
+  #outro .stats { display: flex; gap: 22px; margin-top: 30px; }
+  #outro .stat { border: 4px solid #000; padding: 10px 18px; font-family: Lexend; font-weight: 800; font-size: 30px; }
+  #outro .stat small { display: block; font-family: 'Source Sans 3'; font-weight: 600; font-size: 20px; color: #334155; }
+  #outro .links { margin-top: 26px; font-size: 32px; font-weight: 700; color: var(--red); }
+  #outro .cmd { margin-top: 12px; font-family: Consolas, monospace; font-size: 30px; }
+  .band { position: absolute; left: 0; right: 0; height: 26px; background: var(--ink); }
+</style>
+</head>
+<body>
+  <section class="scene" id="problem">
+    <div class="bubble brut b1">“I’ll send the deck Friday.”</div>
+    <div class="bubble brut b2">“Can you intro me to Sara?”</div>
+    <div class="bubble brut b3">“Deal.”</div>
+    <div class="strike s1"></div><div class="strike s2"></div><div class="strike s3"></div>
+    <h1 class="verdict">Spoken. Then <span>forgotten.</span></h1>
+  </section>
+
+  <section class="scene" id="solution">
+    <h1 class="title">DEXTRA on <span>Even G2</span></h1>
+    <div class="lens"><div>Agreed with Attrito?</div><div>You · send the deck · Fri 27 Nov</div><div>Attrito · intro you to Sara · Wed 25 Nov</div><div class="dim">tap ▸ send to Attrito</div></div>
+    <div class="arrow">→</div>
+    <div class="tg brut"><b>In your Telegram chat</b><br>What we just agreed, so we both have it:<br>• You: send the deck (Fri 27 Nov)<br>• Attrito: intro you to Sara (Wed 25 Nov)</div>
+    <div class="stamp">CONFIRMED ✓</div>
+    <p class="tagline">Said out loud. Confirmed by the other person. Kept by both.</p>
+  </section>
+
+  <section class="scene step" id="step">
+    <div class="card brut"><div class="num">1</div><div><div class="kicker">STEP <span class="n">1</span> OF 5</div><h2 class="t">Start the simulator</h2><p class="sub">s</p></div></div>
+  </section>
+
+  <section class="scene" id="outro">
+    <div class="band" style="top:0"></div><div class="band" style="bottom:0"></div>
+    <div class="wrap"><div class="card brut">
+      <img src="shots/icon.png" alt="">
+      <div>
+        <h1>DEXTRA</h1>
+        <p class="motto"><i>Dictum, factum.</i> Said, and done.</p>
+        <div class="stats">
+          <div class="stat"><span class="c" data-to="112">0</span><small>tests passing</small></div>
+          <div class="stat"><span class="c" data-to="1.00" data-dec="2">0</span><small>precision</small></div>
+          <div class="stat"><span class="c" data-to="0">0</span><small>invented promises</small></div>
+        </div>
+        <p class="links">@DextraAgreeBot · dextra-site.onrender.com</p>
+        <p class="cmd">$ npm run try</p>
+      </div>
+    </div></div>
+  </section>
+
+<script>
+const STEPS = {
+  1: ['Start the simulator', 'npm run try opens DEXTRA on the live server'],
+  2: ['Link Telegram', 'Send the lens code to @DextraAgreeBot'],
+  3: ['Open the chat', 'The other person sends you any message'],
+  4: ['Agree, hold, send', 'Talk, hold the temple, tap to send'],
+  5: ['They confirm', 'One tap in Telegram, then tick items off'],
+}
+const [name, arg] = location.hash.slice(1).split('-')
+const el = document.getElementById(name === 'step' ? 'step' : name)
+el.style.display = name === 'outro' ? 'block' : (name === 'step' ? 'grid' : 'block')
+const tl = gsap.timeline({ paused: true })
+
+function build() {
+if (name === 'problem') {
+  const b = ['.b1', '.b2', '.b3']
+  // Measure the bubbles at rest, before the entrance tween offsets them.
+  b.forEach((sel, i) => {
+    const r = document.querySelector(sel).getBoundingClientRect()
+    const s = document.querySelector('.s' + (i + 1))
+    Object.assign(s.style, { left: r.left - 10 + 'px', top: r.top + r.height / 2 - 4 + 'px', width: r.width + 20 + 'px' })
+  })
+  tl.from(b, { y: 40, scale: .85, opacity: 0, duration: .5, stagger: 1.4, ease: 'back.out(1.6)' }, .2)
+  b.forEach((sel, i) => tl.to('.s' + (i + 1), { scaleX: 1, duration: .35, ease: 'power2.in' }, 4.6 + i * .35))
+  tl.to(b, { opacity: .25, filter: 'blur(3px)', y: 12, duration: .8, stagger: .15 }, 5.8)
+  tl.from('.verdict', { y: 60, opacity: 0, duration: .6, ease: 'back.out(1.4)' }, 6.4)
+}
+if (name === 'solution') {
+  tl.from('.title', { y: -40, opacity: 0, duration: .5, ease: 'back.out(1.4)' }, .1)
+  tl.from('.lens', { x: -120, opacity: 0, duration: .6, ease: 'power3.out' }, .7)
+  tl.from('.lens div', { opacity: 0, x: -12, duration: .3, stagger: .35 }, 1.2)
+  tl.from('.arrow', { x: -40, opacity: 0, duration: .4, ease: 'power2.out' }, 3.2)
+  tl.from('.tg', { x: 120, opacity: 0, duration: .6, ease: 'power3.out' }, 3.6)
+  tl.to('.stamp', { scale: 1, duration: .45, ease: 'back.out(2.2)' }, 5.6)
+  tl.from('.tagline', { y: 30, opacity: 0, duration: .5 }, 6.6)
+}
+if (name === 'step') {
+  const [t, sub] = STEPS[arg]
+  el.querySelector('.num').textContent = arg
+  el.querySelector('.n').textContent = arg
+  el.querySelector('.t').textContent = t
+  el.querySelector('.sub').textContent = sub
+  tl.from('.card', { scale: .8, opacity: 0, duration: .45, ease: 'back.out(1.8)' }, .05)
+  tl.from('.num', { rotation: -90, scale: 0, duration: .5, ease: 'back.out(2)' }, .25)
+  tl.from(['.kicker', '.t', '.sub'], { x: 40, opacity: 0, duration: .35, stagger: .12 }, .4)
+  tl.to('.card', { scale: 1.04, duration: 1.2, ease: 'none' }, .9)
+}
+if (name === 'outro') {
+  tl.from('.band', { scaleX: 0, transformOrigin: 'left', duration: .6, ease: 'power3.out', stagger: .1 }, 0)
+  tl.from('.card', { y: 60, opacity: 0, duration: .6, ease: 'back.out(1.4)' }, .2)
+  tl.from('#outro img', { scale: 0, rotation: -20, duration: .6, ease: 'back.out(2)' }, .5)
+  tl.from(['#outro h1', '.motto'], { x: 40, opacity: 0, duration: .45, stagger: .2 }, .8)
+  tl.from('.stat', { y: 20, opacity: 0, duration: .35, stagger: .15 }, 1.6)
+  document.querySelectorAll('.c').forEach((c, i) => {
+    const to = Number(c.dataset.to), dec = Number(c.dataset.dec || 0), o = { v: 0 }
+    tl.to(o, { v: to, duration: 1, ease: 'power2.out', onUpdate: () => { c.textContent = o.v.toFixed(dec) } }, 1.7 + i * .15)
+  })
+  tl.from(['.links', '.cmd'], { y: 16, opacity: 0, duration: .4, stagger: .2 }, 3)
+}
+}
+// Timelines are built after the fonts load, so measured positions are final.
+window.__play = async () => { await document.fonts.ready; build(); document.body.style.visibility = 'visible'; tl.play(0) }
+</script>
+</body>
+</html>

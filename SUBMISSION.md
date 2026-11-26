@@ -41,7 +41,7 @@ The AI only proposes. A commitment whose quote isn't in the transcript is droppe
 | Live site | https://dextra-site.onrender.com |
 | Live bot | https://t.me/DextraAgreeBot |
 | Live server | https://dextra-qfz7.onrender.com/health |
-| Demo video (140 s: live-site walkthrough, then a live run: simulator lock and send, Attrito confirms in Telegram) | https://github.com/egbujor-emmanuel/dextra/releases/download/submission-v1/dextra-demo.mp4 (upload to YouTube unlisted if the form wants YouTube) |
+| Demo video (167 s: the problem, the fix, five steps each shown live, then proof and close) | https://github.com/egbujor-emmanuel/dextra/releases/download/submission-v1/dextra-demo.mp4 (upload to YouTube unlisted if the form wants YouTube) |
 | Packaged app | `apps/glasses/dextra.ehpk`, attached to GitHub release `submission-v1` |
 | Judges' five-minute path | https://github.com/egbujor-emmanuel/dextra/blob/master/JUDGES.md |
 
