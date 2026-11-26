@@ -14,6 +14,8 @@ const IDLE_REFRESH_MS = 5000
 const STATE_REFRESH_MS = 30_000
 const PAIR_POLL_MS = 4000
 const RECONNECT_MS = 3000
+/** While the lens waits for the other person, the agreement is also polled, so a missed event never strands it. */
+const WAITING_POLL_MS = 5000
 const BOOT_BACKOFF_MS = [1000, 2000, 4000, 8000, 15_000]
 
 /** Lifecycle markers only (read by the simulator e2e). Never logs audio, transcripts or tokens. */
@@ -174,6 +176,14 @@ function onServerEvent(ctx: Ctx, e: ServerEvent): Promise<void> | void {
   return refreshState(ctx)
 }
 
+/** Re-reads the agreement the lens is waiting on and applies any change as if it had arrived as an event. */
+async function pollWaiting(ctx: Ctx): Promise<void> {
+  const current = ctx.agreement
+  if (!current || (ctx.screen.kind !== 'sent' && ctx.screen.kind !== 'amended')) return
+  const latest = (await ctx.api.list()).find(a => a.id === current.id)
+  if (latest && latest.status !== current.status) await onServerEvent(ctx, { type: 'agreement', agreement: latest })
+}
+
 async function refreshState(ctx: Ctx): Promise<void> {
   ctx.state = await ctx.api.state()
 }
@@ -262,6 +272,7 @@ async function boot(): Promise<void> {
   await idle(ctx)
   setInterval(() => { if (ctx.screen.kind === 'idle') void idle(ctx).catch(() => undefined) }, IDLE_REFRESH_MS)
   setInterval(() => void refreshState(ctx).catch(() => undefined), STATE_REFRESH_MS)
+  setInterval(() => void pollWaiting(ctx).catch(() => undefined), WAITING_POLL_MS)
 }
 
 void boot()

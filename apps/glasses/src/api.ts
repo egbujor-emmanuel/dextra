@@ -12,6 +12,10 @@ import {
 } from '@dextra/core'
 import { z } from 'zod'
 
+/** No frame (event or ping) for this long means the event stream is dead. The server pings every 25 s. */
+const STREAM_STALE_MS = 60_000
+const STREAM_CHECK_MS = 5_000
+
 /** The live server (Render, free plan) for packaged builds; a local server in development unless VITE_API_BASE says otherwise. */
 const LIVE_API = 'https://dextra-qfz7.onrender.com'
 export const API_BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? (import.meta.env.PROD ? LIVE_API : 'http://localhost:8787')
@@ -77,7 +81,17 @@ export class Api {
   async events(onEvent: (e: ServerEvent) => void, onDrop: () => void): Promise<EventSource> {
     const { ticket } = await this.call('/api/devices/me/sse-ticket', z.object({ ticket: z.string() }), { method: 'POST' })
     const es = new EventSource(`${API_BASE}/api/devices/me/events?ticket=${encodeURIComponent(ticket)}`)
+    // A proxy can leave a stream open but silent (no error, no frames). The server pings while idle, so a stream with
+    // no frame for STREAM_STALE_MS is treated as dropped and reopened.
+    let lastFrame = Date.now()
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastFrame < STREAM_STALE_MS) return
+      clearInterval(watchdog)
+      es.close()
+      onDrop()
+    }, STREAM_CHECK_MS)
     es.onmessage = msg => {
+      lastFrame = Date.now()
       try {
         const parsed = serverEventSchema.safeParse(JSON.parse(String(msg.data)))
         if (parsed.success) onEvent(parsed.data)
@@ -86,6 +100,7 @@ export class Api {
       }
     }
     es.onerror = () => {
+      clearInterval(watchdog)
       es.close()
       onDrop()
     }
