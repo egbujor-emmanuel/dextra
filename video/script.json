@@ -1,0 +1,66 @@
+{
+  "title": "DEXTRA: said out loud, confirmed in Telegram",
+  "limit_seconds": 180,
+  "target_seconds": 150,
+  "voice": "Kokoro bf_emma (British English, matches the international judging panel); speed ≤ +5%",
+  "format": "1920x1080, 30 fps",
+  "rule": "Every figure on screen is read from evidence/eval-commitments.json, the test run or the live database. No typed numbers. All footage is real: the Even simulator running the live build, Telegram Desktop, the live site.",
+  "scenes": [
+    {
+      "id": "hook",
+      "seconds": 12,
+      "footage": "Black, then the lens frame 'listening' fades up (real capture)",
+      "voice": "I'll send the deck Friday. Can you intro me to Sara? Most promises are spoken, and most of them are never written down.",
+      "notes": "Open on the eval recording's actual audio for the first line, then the narrator."
+    },
+    {
+      "id": "attack",
+      "seconds": 20,
+      "footage": "Live site, 'Try to slip a promise past it': the Invented money preset, then the red REFUSED stamp",
+      "voice": "An AI listening to a conversation can invent a promise. In DEXTRA the AI only proposes. If the words aren't in what was actually said, it never reaches your glasses.",
+      "notes": "Winner rule: open with the attack being refused. Click sound on the preset, impact on the stamp."
+    },
+    {
+      "id": "listen-lock",
+      "seconds": 30,
+      "footage": "Even simulator (live build, live server): eval conversation plays into the mic; Long Press; 'Locking what was said…'; the agreement card with one line per commitment and its date",
+      "voice": "DEXTRA runs on Even G2. It keeps the last forty-five seconds in phone memory only. Agreed something? Hold the temple, and the lens shows who promised what, each line backed by their words.",
+      "notes": "Caption the two speakers. Show the real Long Press input."
+    },
+    {
+      "id": "send",
+      "seconds": 20,
+      "footage": "Simulator Click → lens 'Sent to Attrito · waiting'; Telegram Desktop: the message lands in the chat, sent as the wearer by DEXTRA",
+      "voice": "One tap sends it as you, into the Telegram chat you already have with them. No new app for them to install.",
+      "notes": "Record only the chat pane (gdigrab offsets), mouse hidden; overlay a click ring."
+    },
+    {
+      "id": "confirm",
+      "seconds": 22,
+      "footage": "Second account taps the link, then Confirm ✓; lens: 'Attrito confirmed ✓ · Dictum, factum.'; the record with its SHA-256 fingerprint arrives",
+      "voice": "Nothing counts until they confirm. Then you both hold the same record, sealed with a fingerprint of exactly what was agreed.",
+      "notes": "Riser into impact on 'confirmed'. This is the payoff."
+    },
+    {
+      "id": "done",
+      "seconds": 18,
+      "footage": "Telegram: 'Tap each item when it's done' buttons; ☐ → ☑; the other person is told; lens updates; a real ⏰ reminder message",
+      "voice": "You both tick items off. Whoever owes something gets a reminder the day before, on the day, and if it slips.",
+      "notes": "Use a reminder actually sent by the live scheduler (reminders table)."
+    },
+    {
+      "id": "proof",
+      "seconds": 18,
+      "footage": "Site 'What we measured' block and the terminal: npm test (112 passing) and the eval summary",
+      "voice": "A hundred and twelve tests pass. On twelve labelled conversations, precision is one point oh, recall point nine four, and no invented promise got through.",
+      "notes": "Numbers read from evidence at build time."
+    },
+    {
+      "id": "end",
+      "seconds": 10,
+      "footage": "End card: DEXTRA · Dictum, factum. · @DextraAgreeBot · dextra-site.onrender.com · npm run try",
+      "voice": "DEXTRA. Said, and done. Try it with two Telegram accounts, no glasses needed.",
+      "notes": "Music fades under the card."
+    }
+  ]
+}

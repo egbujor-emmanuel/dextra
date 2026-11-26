@@ -12,3 +12,5 @@ coverage/
 evidence/raw/
 data/*.log
 data/*.png
+video/renders/
+video/shots/end.html.bak
