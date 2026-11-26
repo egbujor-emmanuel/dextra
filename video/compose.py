@@ -61,9 +61,12 @@ def site_segment(name: str, start: float, end: float, lines: list[str], marks: d
     return render(name, ["-i", str(R / "site.webm")], vf, voices, 1, length)
 
 
+LENS = R / "lens-live"  # capture_lens.py --send run: listen, lock, card, send, waiting
+
+
 def first_card_frame(lock_at: float) -> float:
     """Time of the first frame after "Locking what was said…" (the card), by lit-pixel count jumping up."""
-    frames = sorted((R / "lens").glob("*.png"))
+    frames = sorted(LENS.glob("*.png"))
     sizes = [(int(f.stem) / 1000, f.stat().st_size) for f in frames]
     locking = [sz for t, sz in sizes if lock_at < t < lock_at + 3]
     base = min(locking) if locking else 0
@@ -71,9 +74,9 @@ def first_card_frame(lock_at: float) -> float:
 
 
 def lens_segment() -> Path:
-    timing = json.loads((R / "lens" / "timing.json").read_text())
+    timing = json.loads((LENS / "timing.json").read_text())
     start = 1.0
-    length = timing["end"] - start - 0.2
+    length = timing["send_at"] + 9.0 - start
     card_at = first_card_frame(timing["lock_at"]) - start
     vf = ("[0:v]fps=30,format=rgba,geq=r='if(gt(alpha(X,Y),0),70,0)':g='if(gt(alpha(X,Y),0),255,0)':"
           "b='if(gt(alpha(X,Y),0),140,0)':a=255,"
@@ -83,16 +86,33 @@ def lens_segment() -> Path:
           f"fade=t=in:st=0:d=0.25,fade=t=out:st={length - 0.3}:d=0.3[vout]")
     conversation = ROOT.parent / "evals" / "audio" / "conversation.wav"
     voices = [(conversation, timing["audio_at"] - start), (V / "sim.wav", card_at + 0.3)]
-    return render("lens", ["-f", "concat", "-safe", "0", "-i", str(R / "lens" / "frames.txt")], vf, voices, 1, length)
+    return render("lens", ["-f", "concat", "-safe", "0", "-i", str(LENS / "frames.txt")], vf, voices, 1, length)
+
+
+def confirmed_segment() -> Path:
+    """The lens after the other person confirmed (captured from the same session, 999000.png)."""
+    length = 4.0
+    vf = ("[0:v]format=rgba,geq=r='if(gt(alpha(X,Y),0),70,0)':g='if(gt(alpha(X,Y),0),255,0)':"
+          "b='if(gt(alpha(X,Y),0),140,0)':a=255,scale=1728:864:flags=neighbor,"
+          "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=0x0b0f0c,format=yuv420p,fps=30,"
+          f"{label('In the Even simulator · after Attrito tapped Confirm')},"
+          f"fade=t=in:st=0:d=0.25,fade=t=out:st={length - 0.3}:d=0.3[vout]")
+    out = R / "seg-confirmed.mp4"
+    script = R / "seg-confirmed.filter"
+    script.write_text(vf, encoding="utf-8")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-i", str(LENS / "999000.png"),
+                    "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-filter_complex_script", str(script),
+                    "-map", "[vout]", "-map", "1:a", "-t", f"{length}", *ENC, str(out)], check=True)
+    return out
 
 
 def telegram_segment() -> Path:
-    length = 12.5
-    vf = ("[0:v]trim=1.5:26.5,setpts=(PTS-STARTPTS)/2,fps=30,scale=-2:1000:flags=lanczos,"
+    length = 21.0
+    vf = ("[0:v]trim=58:100,setpts=(PTS-STARTPTS)/2,fps=30,scale=-2:1000:flags=lanczos,"
           "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=0xe8efff,"
-          f"{label('In Telegram · the real chat with Attrito')},"
+          f"{label('In Telegram · live · Attrito confirms and ticks')},"
           f"fade=t=in:st=0:d=0.25,fade=t=out:st={length - 0.3}:d=0.3[vout]")
-    return render("telegram", ["-i", str(R / "telegram.mp4")], vf, [(V / "telegram.wav", 0.5)], 1, length)
+    return render("telegram", ["-i", str(R / "telegram-live.mp4")], vf, [(V / "telegram.wav", 1.5)], 1, length)
 
 
 def main() -> None:
@@ -105,6 +125,7 @@ def main() -> None:
         site_segment("a", a_start, marks["cut"], ORDER[:5], marks),
         lens_segment(),
         telegram_segment(),
+        confirmed_segment(),
         site_segment("d", d_start, min(end, marks["proof"] + dur(V / "proof.wav") + 1.5), ORDER[6:], marks),
     ]
     lst = R / "segments.txt"

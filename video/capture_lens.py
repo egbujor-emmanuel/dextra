@@ -6,6 +6,7 @@ It plays the eval conversation through the speakers (the simulator listens on th
 Writes video/renders/lens/<ms>.png frames and video/renders/lens/frames.txt (an ffmpeg concat list with real timing).
 Usage: python video/capture_lens.py
 """
+import argparse
 import json
 import subprocess
 import threading
@@ -15,7 +16,7 @@ from pathlib import Path
 
 SIM = "http://localhost:9898"
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "renders" / "lens"
+OUT = ROOT / "renders" / "lens"  # replaced by --out
 AUDIO = ROOT.parent / "evals" / "audio" / "conversation.wav"
 HOLD_AFTER_LOCK_S = 11
 
@@ -39,6 +40,13 @@ def grab_loop(stop: threading.Event, frames: list[tuple[float, Path]], t0: float
 
 
 def main() -> None:
+    global OUT
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default=str(OUT))
+    ap.add_argument("--send", action="store_true", help="tap send once the card is up, then keep recording")
+    ap.add_argument("--hold", type=float, default=HOLD_AFTER_LOCK_S, help="seconds to keep recording after the lock (or the send)")
+    args = ap.parse_args()
+    OUT = Path(args.out).resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.png"):
         old.unlink()
@@ -55,7 +63,13 @@ def main() -> None:
     press("long_press")
     time.sleep(0.6)
     press("long_press_release")
-    time.sleep(HOLD_AFTER_LOCK_S)
+    send_at = None
+    if args.send:
+        time.sleep(12)
+        send_at = time.monotonic() - t0
+        press("click")
+        print(f"sent at {send_at:.1f}s", flush=True)
+    time.sleep(args.hold)
     stop.set()
     grabber.join()
     end = time.monotonic() - t0
@@ -65,7 +79,7 @@ def main() -> None:
         lines.append(f"file '{path.as_posix()}'\nduration {max(nxt - t, 0.01):.3f}\n")
     lines.append(f"file '{frames[-1][1].as_posix()}'\n")
     (OUT / "frames.txt").write_text("".join(lines), encoding="utf-8")
-    (OUT / "timing.json").write_text(json.dumps({"audio_at": audio_at, "lock_at": lock_at, "end": end, "frames": len(frames)}))
+    (OUT / "timing.json").write_text(json.dumps({"audio_at": audio_at, "lock_at": lock_at, "send_at": send_at, "end": end, "frames": len(frames)}))
     print(f"{len(frames)} frames over {end:.1f}s; audio at {audio_at:.1f}s, lock at {lock_at:.1f}s")
 
 
