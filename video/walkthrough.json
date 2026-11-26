@@ -1,0 +1,15 @@
+{
+  "voice": "bf_emma",
+  "lines": [
+    { "id": "intro", "label": "DEXTRA · Even G2 + Telegram", "text": "This is DEXTRA, an Even G2 app. Agree something out loud, and the other person confirms it in Telegram. Here's how to use it." },
+    { "id": "step1", "label": "Step 1 · Start the simulator", "text": "Step one. Clone the repo and run npm run try. The official Even simulator opens DEXTRA, connected to the live server." },
+    { "id": "step2", "label": "Step 2 · Link Telegram", "text": "Step two. Send the code on the lens to Dextra Agree Bot, and add the bot under Chat Automation." },
+    { "id": "step3", "label": "Step 3 · Open the chat", "text": "Step three. From the other person's account, send yourself any message. That opens Telegram's reply window." },
+    { "id": "step4", "label": "Step 4 · Agree, hold, send", "text": "Step four. Agree something near the mic, hold to lock it, and click to send." },
+    { "id": "sim", "label": "In the simulator", "text": "On the lens, DEXTRA shows who promised what, each line backed by their words. One click sends it as you." },
+    { "id": "telegram", "label": "In Telegram", "text": "The other person gets it in your chat and taps Confirm. Then you both tick items off as they're done." },
+    { "id": "gate", "label": "It can't invent promises", "text": "The AI only proposes. Try to slip in a promise nobody made, and it's refused before it reaches the lens." },
+    { "id": "records", "label": "Real records", "text": "These are real records from the live database. Flip one for its timeline and fingerprint, or mask the names before a screen share." },
+    { "id": "proof", "label": "Measured", "text": "A hundred and twelve tests pass, and on our eval no invented promise got through. DEXTRA. Said, and done." }
+  ]
+}
